@@ -39,7 +39,7 @@ describe('WeekNav', () => {
     const view = await render(
       <WeekNav isCurrentWeek weekLabel="x" onPrev={noop} onNext={onNext} />,
     );
-    fireEvent.press(view.getByTestId('next-week-btn'));
+    await fireEvent.press(view.getByTestId('next-week-btn'));
     expect(onNext).not.toHaveBeenCalled();
   });
 });
