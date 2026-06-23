@@ -4,12 +4,14 @@
  * danger-toned banner. A friendly message is shown (the raw error is not leaked to the UI).
  */
 import { Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppStore } from '@/store/useAppStore';
 import { useTheme } from '@/theme/ThemeProvider';
 
 export function SaveErrorToast() {
   const saveError = useAppStore((s) => s.saveError);
+  const insets = useSafeAreaInsets();
   const { color, font, space, radius } = useTheme();
   if (saveError === null) return null;
   return (
@@ -19,7 +21,8 @@ export function SaveErrorToast() {
         position: 'absolute',
         left: space.s5,
         right: space.s5,
-        bottom: space.s6,
+        // Lift above the home indicator / gesture bar on devices with a bottom inset.
+        bottom: space.s6 + insets.bottom,
         backgroundColor: color.danger,
         borderRadius: radius.card,
         paddingVertical: space.s3,

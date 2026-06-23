@@ -42,7 +42,13 @@ export function CategoryChip({ category, isDone, expanded, onToggle, onExpand }:
       {isDone ? <Text style={{ color: fg, fontSize: font.body.size }}>✓</Text> : null}
       <Pressable
         testID={`chip-${category}-expand`}
-        onPress={onExpand}
+        onPress={(e) => {
+          // Isolate expand from the outer chip toggle: on web a nested Pressable press can
+          // bubble to the parent and fire onToggle. Native already isolates via the
+          // responder system; stopPropagation makes it correct cross-platform.
+          e?.stopPropagation?.();
+          onExpand();
+        }}
         hitSlop={8}
         accessibilityRole="button">
         <Text style={{ color: fg, fontSize: font.body.size }}>{expanded ? '∧' : '∨'}</Text>
