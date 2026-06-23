@@ -41,3 +41,12 @@ example
 # generated native folders
 /ios
 /android
+
+# OMC working state (multi-agent orchestration)
+.omc/
+
+# test coverage
+coverage/
+
+# copilot review cycle state
+.copilot-review-state.json
