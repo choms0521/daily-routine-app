@@ -57,5 +57,6 @@ describe('CategoryChip', () => {
     );
     await fireEvent.press(view.getByTestId('chip-aerobic-expand'));
     expect(onExpand).toHaveBeenCalledTimes(1);
+    expect(onToggle).not.toHaveBeenCalled(); // chevron must not bubble to the chip toggle
   });
 });

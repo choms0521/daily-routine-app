@@ -100,6 +100,27 @@ describe('optimistic save failure', () => {
     await flush();
     expect(store.getState().saveError).toMatch(/disk full/);
   });
+
+  it('suppresses a stale error from an older save superseded by a newer one', async () => {
+    let rejectFirst: (e: Error) => void = () => {};
+    let call = 0;
+    const repo: StorageRepository = {
+      load: async () => clone(baseState),
+      save: () => {
+        call += 1;
+        if (call === 1) return new Promise<void>((_, reject) => (rejectFirst = reject)); // hangs
+        return Promise.resolve(); // newer save succeeds
+      },
+    };
+    const store = createAppStore(repo);
+    await store.getState().hydrate();
+    store.getState().toggleCheck(MON, 'anaerobic', 'x3'); // save #1 (will fail later)
+    store.getState().toggleCheck(MON, 'anaerobic', 'x2'); // save #2 (succeeds)
+    await flush();
+    rejectFirst(new Error('stale disk error')); // older save fails after the newer one won
+    await flush();
+    expect(store.getState().saveError).toBeNull();
+  });
 });
 
 describe('resetWeek', () => {

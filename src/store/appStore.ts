@@ -91,9 +91,15 @@ export function createAppStore(repository: StorageRepository): AppStoreApi {
   return create<AppStore>((set, get) => {
     // Optimistic write: the store is updated immediately (UI reflects it now), then the
     // whole state is persisted asynchronously; only a failure is surfaced (PRD 6.3/8.3).
+    // Saves are fire-and-forget and can resolve out of order, so a sequence guard ensures
+    // only the latest save's failure surfaces — an older save failing after a newer one
+    // was dispatched must not raise a stale error for already-persisted state.
+    let saveSeq = 0;
     const persist = (next: AppState) => {
+      const seq = (saveSeq += 1);
       set({ state: next, saveError: null });
       void repository.save(next).catch((e: unknown) => {
+        if (seq !== saveSeq) return; // superseded by a newer save
         set({ saveError: e instanceof Error ? e.message : String(e) });
       });
     };

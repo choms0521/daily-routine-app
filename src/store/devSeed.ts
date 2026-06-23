@@ -5,11 +5,12 @@
  * Stage 2. Gated behind __DEV__ and removed once Stage 3 lands. The weekly routine has
  * all 7 weekdays defined, so it populates whatever the current real week is.
  */
+import { CURRENT_SCHEMA_VERSION } from '@/domain/migration';
 import type { AppState } from '@/types/schema';
 import type { AppStoreApi } from '@/store/appStore';
 
 export const SAMPLE_STATE: AppState = {
-  schemaVersion: 1,
+  schemaVersion: CURRENT_SCHEMA_VERSION,
   routines: [
     {
       id: 'rt_aXk92',
