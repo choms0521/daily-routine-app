@@ -47,3 +47,6 @@ example
 
 # test coverage
 coverage/
+
+# copilot review cycle state
+.copilot-review-state.json
