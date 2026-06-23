@@ -41,4 +41,9 @@ describe('AsyncStorageRepository', () => {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(future));
     await expect(new AsyncStorageRepository().load()).rejects.toThrow();
   });
+
+  it('rejects corrupted (non-JSON) storage with a contextual error', async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, '{not valid json');
+    await expect(new AsyncStorageRepository().load()).rejects.toThrow(/not valid JSON/);
+  });
 });

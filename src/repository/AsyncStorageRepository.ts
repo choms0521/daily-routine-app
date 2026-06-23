@@ -13,7 +13,16 @@ export class AsyncStorageRepository implements StorageRepository {
   async load(): Promise<AppState | null> {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (raw === null) return null;
-    const parsed: unknown = JSON.parse(raw);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (error) {
+      // A corrupted or manually edited value would otherwise reject load() with a bare
+      // SyntaxError; wrap it with the storage key so the hydrate failure is diagnosable.
+      throw new Error(`Stored app state under "${STORAGE_KEY}" is not valid JSON`, {
+        cause: error,
+      });
+    }
     // Back up the original before migrating an older payload, then migrate + validate.
     if (schemaVersionOf(parsed) < CURRENT_SCHEMA_VERSION) {
       await backupBeforeMigrate(parsed);
