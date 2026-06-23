@@ -36,4 +36,19 @@ describe('AppStateSchema', () => {
     noActive.settings.activeRoutineId = null;
     expect(() => AppStateSchema.parse(noActive)).not.toThrow();
   });
+
+  it('rejects a malformed (non YYYY-MM-DD) activation effectiveFrom', () => {
+    const broken = clone(baseState) as Record<string, any>;
+    broken.activationTimeline[0].effectiveFrom = '2026-6-1'; // not zero-padded -> sorts wrong
+    expect(() => AppStateSchema.parse(broken)).toThrow();
+  });
+
+  it('rejects a malformed DayLog.date and completionLogs key', () => {
+    const broken = clone(baseState) as Record<string, any>;
+    const log = broken.completionLogs['2026-06-22'];
+    log.date = '6/22/2026';
+    broken.completionLogs['6/22/2026'] = log;
+    delete broken.completionLogs['2026-06-22'];
+    expect(() => AppStateSchema.parse(broken)).toThrow();
+  });
 });

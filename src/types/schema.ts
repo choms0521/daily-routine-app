@@ -11,8 +11,14 @@
  */
 import { z } from 'zod';
 
-/** 'YYYY-MM-DD' local date key. The standard date argument/key across all modules. */
-export type DateKey = string;
+/**
+ * 'YYYY-MM-DD' local date key. The standard date argument/key across all modules.
+ * Validated at the boundary because the domain orders date keys lexicographically
+ * (compareDateKey), which only equals chronological order for zero-padded ISO dates;
+ * a malformed key (e.g. "2026-6-1") would sort wrong and silently break resolution.
+ */
+export const DateKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a YYYY-MM-DD date key');
+export type DateKey = z.infer<typeof DateKeySchema>;
 /** ISO 8601 timestamp (e.g. createdAt). */
 export type ISOTimestamp = string;
 
@@ -75,14 +81,14 @@ export type Routine = z.infer<typeof RoutineSchema>;
 
 /** Append-only activation event (PRD 4.3). */
 export const ActivationSchema = z.object({
-  effectiveFrom: z.string(), // applies from this date onward
+  effectiveFrom: DateKeySchema, // applies from this date onward (lexicographically ordered)
   routineId: z.string(),
   versionId: z.string(),
 });
 export type Activation = z.infer<typeof ActivationSchema>;
 
 export const DayLogSchema = z.object({
-  date: z.string(),
+  date: DateKeySchema,
   routineId: z.string(), // active routine that day (cache/verification, PRD 4.4)
   versionId: z.string(), // active version that day (denormalized cache, not the resolution path)
   checks: z.object({
@@ -102,7 +108,7 @@ export const AppStateSchema = z.object({
   schemaVersion: z.number(),
   routines: z.array(RoutineSchema),
   activationTimeline: z.array(ActivationSchema), // append-only, ordered activation events
-  completionLogs: z.record(z.string(), DayLogSchema),
+  completionLogs: z.record(DateKeySchema, DayLogSchema),
   settings: SettingsSchema,
 });
 export type AppState = z.infer<typeof AppStateSchema>;
