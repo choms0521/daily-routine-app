@@ -8,8 +8,8 @@
  * given StorageRepository. Tests inject a fake repository. The app-wide singleton lives
  * in `@/store/useAppStore` (it pulls in AsyncStorage); keeping this factory module free
  * of that import lets store unit tests run without mocking the native module. The
- * mutating actions (toggleCheck/toggleCategory/resetWeek) are added on their Stage 2
- * days; this module currently provides the shell + `hydrate()`.
+ * mutating actions (toggleCheck/toggleCategory/resetWeek) update completionLogs immutably
+ * and persist optimistically through the repository.
  */
 import { create } from 'zustand';
 import type { StoreApi, UseBoundStore } from 'zustand';
@@ -37,10 +37,13 @@ export interface AppStore {
   hydrated: boolean;
   /** Set when the last optimistic Repository.save() failed (PRD 8.3); drives a toast. */
   saveError: string | null;
+  /** Set when hydrate() could not read persisted state (e.g. corrupted storage). */
+  hydrateError: string | null;
   /**
    * Load persisted state on app start. The repository's load() already migrates and
    * validates (spec §5.3); an empty store (null) falls back to emptyAppState(). A load
-   * failure (e.g. corrupted JSON) rejects and is left for the app root to surface.
+   * failure (e.g. corrupted JSON) rejects; the app root records it in `hydrateError`
+   * (it must not be swallowed) and proceeds with an empty state.
    */
   hydrate: () => Promise<void>;
   /** Toggle one slot's check (PRD 5.1/5.2). Optimistic: UI updates, then save async. */
@@ -98,6 +101,7 @@ export function createAppStore(repository: StorageRepository): AppStoreApi {
       state: emptyAppState(),
       hydrated: false,
       saveError: null,
+      hydrateError: null,
       hydrate: async () => {
         const loaded = await repository.load();
         set({ state: loaded ?? emptyAppState(), hydrated: true });

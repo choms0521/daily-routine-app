@@ -1,8 +1,9 @@
 /**
  * Home screen (PRD 6.4). Subscribes to the store and delegates all computation to the
  * Stage 1 domain via selectors; this screen only displays. Header (routine name, streak,
- * week nav, progress) + the 7 weekday cards. Category chips + toggle actions arrive in
- * Day 3; here each card shows a lightweight category placeholder.
+ * week nav, progress) + the 7 weekday cards, each carrying its category chips
+ * (DayCategories) wired to the store's toggle actions, plus a reset-week control and the
+ * save-error toast.
  */
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';

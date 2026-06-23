@@ -20,7 +20,14 @@ export default function RootLayout() {
     useAppStore
       .getState()
       .hydrate()
-      .catch(() => {})
+      .catch((e: unknown) => {
+        // Storage unreadable/corrupted: record it (do not swallow) and proceed with an
+        // empty state so the app still starts. The flag is available for a Stage 5 surface.
+        useAppStore.setState({
+          hydrated: true,
+          hydrateError: e instanceof Error ? e.message : String(e),
+        });
+      })
       .finally(() => {
         if (__DEV__) seedIfEmpty(useAppStore);
       });
