@@ -9,6 +9,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DayCard } from '@/components/chip/DayCard';
+import { DayCategories } from '@/components/chip/DayCategories';
 import { WeekEmptyState } from '@/components/home/WeekEmptyState';
 import { WeekNav } from '@/components/home/WeekNav';
 import { ProgressBar } from '@/components/progress/ProgressBar';
@@ -21,23 +22,15 @@ import {
   selectStreak,
   selectWeekLabel,
   selectWeekProgress,
-  type DayViewModel,
 } from '@/store/selectors';
 import { useAppStore } from '@/store/useAppStore';
 import { useTheme } from '@/theme/ThemeProvider';
 
-function CategoryPlaceholder({ vm }: { vm: DayViewModel }) {
-  const { color, font } = useTheme();
-  const cats: string[] = [];
-  if (vm.plan && vm.plan.aerobic.length > 0) cats.push(vm.aerobicDone ? '유산소 ✓' : '유산소');
-  if (vm.plan && vm.plan.anaerobic.length > 0) cats.push(vm.anaerobicDone ? '무산소 ✓' : '무산소');
-  if (cats.length === 0) return null;
-  return <Text style={{ color: color.fgMuted, fontSize: font.caption.size }}>{cats.join('  ·  ')}</Text>;
-}
-
 export default function HomeScreen() {
   const { color, space, font } = useTheme();
   const state = useAppStore((s) => s.state);
+  const toggleCheck = useAppStore((s) => s.toggleCheck);
+  const toggleCategory = useAppStore((s) => s.toggleCategory);
   const today = toDateKey(new Date());
   const [viewedWeekStart, setViewedWeekStart] = useState(() => weekStartOf(today));
 
@@ -84,7 +77,11 @@ export default function HomeScreen() {
                 isToday={vm.isToday}
                 isCurrentWeek={current}
                 isRestDay={vm.isRestDay}>
-                <CategoryPlaceholder vm={vm} />
+                <DayCategories
+                  vm={vm}
+                  onToggleCategory={(category, value) => toggleCategory(vm.date, category, value)}
+                  onCheck={(category, slotId) => toggleCheck(vm.date, category, slotId)}
+                />
               </DayCard>
             ))}
           </View>
