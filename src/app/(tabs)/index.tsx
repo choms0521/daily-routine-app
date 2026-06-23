@@ -10,11 +10,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DayCard } from '@/components/chip/DayCard';
 import { DayCategories } from '@/components/chip/DayCategories';
+import { SaveErrorToast } from '@/components/home/SaveErrorToast';
 import { WeekEmptyState } from '@/components/home/WeekEmptyState';
 import { WeekNav } from '@/components/home/WeekNav';
 import { ProgressBar } from '@/components/progress/ProgressBar';
 import { StreakBadge } from '@/components/progress/StreakBadge';
-import { addDays, toDateKey, weekStartOf } from '@/domain/date';
+import { addDays, weekStartOf } from '@/domain/date';
+import { todayKey } from '@/domain/clock';
 import {
   isCurrentWeek,
   selectActiveRoutineName,
@@ -31,7 +33,7 @@ export default function HomeScreen() {
   const state = useAppStore((s) => s.state);
   const toggleCheck = useAppStore((s) => s.toggleCheck);
   const toggleCategory = useAppStore((s) => s.toggleCategory);
-  const today = toDateKey(new Date());
+  const today = todayKey();
   const [viewedWeekStart, setViewedWeekStart] = useState(() => weekStartOf(today));
 
   const routineName = selectActiveRoutineName(state);
@@ -87,6 +89,7 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
+      <SaveErrorToast />
     </SafeAreaView>
   );
 }
