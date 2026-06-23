@@ -1,0 +1,14 @@
+# Stage 2 E2E flow 2: a check survives an app restart (PRD AC-5.1.2).
+#
+# Prereq: as in stage2_chip_check.yaml. The restart-persistence guarantee is also proven
+# deterministically by __tests__/store/actions.test.ts ("restart persistence (AC-5.1.2)").
+appId: com.dailyroutine.app
+---
+- launchApp
+- tapOn:
+    text: "유산소"
+    index: 1
+- assertVisible: "✓"
+- stopApp
+- launchApp # cold restart
+- assertVisible: "✓" # check still present after reload from storage

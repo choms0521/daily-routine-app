@@ -13,6 +13,7 @@
  */
 import { create } from 'zustand';
 import type { StoreApi, UseBoundStore } from 'zustand';
+import { weekDays } from '@/domain/date';
 import { CURRENT_SCHEMA_VERSION } from '@/domain/migration';
 import { activationOf, plan } from '@/domain/timeline';
 import type { StorageRepository } from '@/repository/StorageRepository';
@@ -46,6 +47,8 @@ export interface AppStore {
   toggleCheck: (date: DateKey, category: Category, slotId: string) => void;
   /** Set every slot of a category to `value` at once (PRD 5.2 batch). Optimistic. */
   toggleCategory: (date: DateKey, category: Category, value: boolean) => void;
+  /** Clear the viewed week's completion logs only (PRD 5.10); routines/timeline untouched. */
+  resetWeek: (weekStartMonday: DateKey) => void;
 }
 
 const EMPTY_CHECKS: DayLog['checks'] = { aerobic: {}, anaerobic: {} };
@@ -119,6 +122,21 @@ export function createAppStore(repository: StorageRepository): AppStoreApi {
         const next = writeChecks(state, date, category, nextCat);
         if (next === state) return;
         persist(next);
+      },
+      resetWeek: (weekStartMonday) => {
+        const { state } = get();
+        const inWeek = new Set(weekDays(weekStartMonday));
+        const completionLogs: AppState['completionLogs'] = {};
+        let changed = false;
+        for (const [date, log] of Object.entries(state.completionLogs)) {
+          if (inWeek.has(date)) {
+            changed = true; // drop this week's log
+            continue;
+          }
+          completionLogs[date] = log;
+        }
+        if (!changed) return; // nothing logged that week -> no-op
+        persist({ ...state, completionLogs });
       },
     };
   });

@@ -101,3 +101,48 @@ describe('optimistic save failure', () => {
     expect(store.getState().saveError).toMatch(/disk full/);
   });
 });
+
+describe('resetWeek', () => {
+  it('clears the viewed week logs and keeps routines/timeline by reference (AC-5.10.1)', async () => {
+    const store = createAppStore(fakeRepo(clone(baseState)));
+    await store.getState().hydrate();
+    const before = store.getState().state;
+    store.getState().resetWeek(MON); // week containing the 2026-06-22 log
+    const after = store.getState().state;
+    expect(after.completionLogs[MON]).toBeUndefined();
+    expect(Object.keys(after.completionLogs)).toHaveLength(0);
+    expect(after.routines).toBe(before.routines);
+    expect(after.activationTimeline).toBe(before.activationTimeline);
+  });
+
+  it('is a no-op when the week has no logs', async () => {
+    const repo = fakeRepo(clone(baseState));
+    const store = createAppStore(repo);
+    await store.getState().hydrate();
+    const before = store.getState().state;
+    store.getState().resetWeek('2026-05-04'); // a week with no logs
+    expect(store.getState().state).toBe(before); // unchanged reference
+    await flush();
+    expect(repo.saved).toHaveLength(0);
+  });
+});
+
+describe('restart persistence (AC-5.1.2)', () => {
+  it('a check survives a reload through the repository', async () => {
+    let stored: string | null = null;
+    const repo: StorageRepository = {
+      load: async () => (stored ? (JSON.parse(stored) as AppState) : null),
+      save: async (s) => {
+        stored = JSON.stringify(s);
+      },
+    };
+    const first = createAppStore(repo);
+    first.setState({ state: clone(baseState), hydrated: true });
+    first.getState().toggleCheck(TUE, 'aerobic', 'a1');
+    await flush();
+
+    const reopened = createAppStore(repo);
+    await reopened.getState().hydrate();
+    expect(reopened.getState().state.completionLogs[TUE].checks.aerobic.a1).toBe(true);
+  });
+});
