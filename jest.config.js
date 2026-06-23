@@ -7,11 +7,15 @@
  */
 module.exports = {
   preset: 'jest-expo',
-  // Only *.test.ts are test suites; shared fixtures/helpers under __tests__ are not.
-  testMatch: ['**/__tests__/**/*.test.ts'],
+  // Only *.test.ts(x) are test suites; shared fixtures/helpers under __tests__ are not.
+  // .tsx is included for component (RNTL) tests from Stage 2 onward.
+  testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
   collectCoverageFrom: [
     'src/domain/**/*.ts',
     'src/repository/**/*.ts',
     'src/types/**/*.ts',
+    'src/store/**/*.ts',
+    'src/components/**/*.tsx',
+    'src/theme/**/*.{ts,tsx}',
   ],
 };
