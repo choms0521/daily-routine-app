@@ -64,4 +64,17 @@ describe('home integration', () => {
     expect(view.getByText('6.15 – 6.21 · 지난 주')).toBeTruthy();
     expect(view.getByTestId('next-week-btn')).toBeEnabled();
   });
+
+  it('shows the "applies tomorrow" banner when a future activation is pending', async () => {
+    const pending = clone(baseState);
+    pending.activationTimeline.push({
+      effectiveFrom: '2026-06-24', // tomorrow relative to the mocked today
+      routineId: 'rt_aXk92',
+      versionId: 'v_002',
+    });
+    useAppStore.setState({ state: pending, hydrated: true });
+    const view = await renderHome();
+    expect(view.getByTestId('home-banner')).toBeTruthy();
+    expect(view.getByText("내일부터 '여름 컨디셔닝'이 적용됩니다.")).toBeTruthy();
+  });
 });

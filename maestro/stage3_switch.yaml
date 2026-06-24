@@ -1,0 +1,39 @@
+# Stage 3 E2E flow B: switch active routine -> confirm sheet -> today stays, banner, badge.
+#
+# Prereq: as in stage3_create_edit.yaml, and at least one routine already active (run flow A
+# first, or seed one). This flow adds a second routine and switches to it; the switch is
+# effective tomorrow (today's plan is protected, D8.8). The switch logic is proven
+# deterministically by __tests__/store/setActiveRoutine.test.ts and
+# __tests__/integration/library.test.tsx.
+appId: com.dailyroutine.app
+---
+- launchApp
+- tapOn:
+    text: "루틴" # Library tab
+- tapOn:
+    id: "new-routine-btn"
+- inputText: "가벼운 산책"
+- tapOn:
+    id: "add-exercise-aerobic"
+- tapOn:
+    text: "걷기"
+- tapOn:
+    id: "exercise-add-confirm"
+- tapOn:
+    id: "editor-save"
+# Switch to the new routine: a routine is already active -> confirm sheet appears.
+# Tap by the known name (not a card-id regex, which could match the already-active card and
+# hide the activate action).
+- tapOn:
+    text: "가벼운 산책"
+- tapOn:
+    id: "routine-action-activate"
+- assertVisible:
+    id: "activation-confirm-sheet"
+- tapOn:
+    id: "activation-confirm"
+# Home: today still shows the previous routine's plan; banner announces tomorrow's switch.
+- tapOn:
+    text: "홈"
+- assertVisible:
+    id: "home-banner"

@@ -1,0 +1,58 @@
+# Stage 3 E2E flow A: create -> activate -> check -> edit (new version) -> today/past intact.
+#
+# Prereq: `maestro` CLI installed and a standalone/dev build (set its bundle id below). In v1
+# the app runs in Expo Go, which Maestro cannot target by project URL reliably, so this runs
+# against a dev build. With the Stage 2 dev seed removed, the app starts empty and this flow
+# creates the first routine itself. The same logic is proven deterministically by
+# __tests__/integration/editor.test.tsx and __tests__/store/routineActions.test.ts.
+appId: com.dailyroutine.app
+---
+- launchApp
+# Empty first-run state -> create the first routine.
+- assertVisible: "아직 루틴이 없습니다"
+- tapOn:
+    id: "create-first-routine-btn"
+- assertVisible:
+    id: "editor-save"
+- inputText: "여름 컨디셔닝" # routine name -> save becomes enabled
+- tapOn:
+    id: "add-exercise-aerobic"
+- tapOn:
+    text: "러닝" # catalog pick pre-fills name + sets
+- tapOn:
+    id: "exercise-add-confirm"
+- tapOn:
+    id: "editor-save" # createRoutine -> router.back() returns to the Home empty state
+# The editor was opened from Home, so switch to the Library tab before touching its cards.
+- tapOn:
+    text: "루틴"
+# Activate it from the library (first activation -> immediate, no confirm sheet).
+- tapOn:
+    id: "routine-card-rt_.*" # the freshly created routine
+- tapOn:
+    id: "routine-action-activate"
+- assertVisible:
+    id: "active-badge-rt_.*"
+# Home reflects the active routine; then return to the Library tab to edit it.
+- tapOn:
+    text: "홈"
+- assertVisible: "여름 컨디셔닝"
+- tapOn:
+    text: "루틴"
+- tapOn:
+    id: "routine-card-rt_.*" # (library) reopen to edit
+- tapOn:
+    id: "routine-action-edit"
+- tapOn:
+    id: "add-exercise-anaerobic"
+- tapOn:
+    text: "스쿼트"
+- tapOn:
+    id: "exercise-add-confirm"
+- tapOn:
+    id: "editor-save"
+# Active-routine edit -> the home banner announces tomorrow's new version.
+- tapOn:
+    text: "홈"
+- assertVisible:
+    id: "home-banner"

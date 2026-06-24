@@ -11,6 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DayCard } from '@/components/chip/DayCard';
 import { DayCategories } from '@/components/chip/DayCategories';
+import { HomeBanner } from '@/components/home/HomeBanner';
+import { NoRoutineState } from '@/components/home/NoRoutineState';
 import { ResetWeekButton } from '@/components/home/ResetWeekButton';
 import { SaveErrorToast } from '@/components/home/SaveErrorToast';
 import { WeekEmptyState } from '@/components/home/WeekEmptyState';
@@ -23,6 +25,7 @@ import {
   isCurrentWeek,
   selectActiveRoutineName,
   selectDayViewModels,
+  selectPendingActivation,
   selectStreak,
   selectWeekLabel,
   selectWeekProgress,
@@ -45,6 +48,7 @@ export default function HomeScreen() {
   const dayVMs = selectDayViewModels(state, viewedWeekStart, today);
   const current = isCurrentWeek(viewedWeekStart, today);
   const weekLabel = selectWeekLabel(viewedWeekStart, today);
+  const pendingActivation = selectPendingActivation(state, today);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: color.bg }} edges={['top']}>
@@ -70,7 +74,13 @@ export default function HomeScreen() {
           <ProgressBar done={progress.done} total={progress.total} pct={progress.pct} />
         </View>
 
-        {progress.total === 0 ? (
+        {pendingActivation !== null ? (
+          <HomeBanner routineName={pendingActivation.routineName} />
+        ) : null}
+
+        {state.routines.length === 0 ? (
+          <NoRoutineState />
+        ) : progress.total === 0 ? (
           <WeekEmptyState />
         ) : (
           <View style={{ gap: space.s3 }}>

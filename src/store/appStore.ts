@@ -4,20 +4,32 @@
  * Zustand persist) so storage swap (AsyncStorage -> MMKV) and migration stay outside
  * the store.
  *
- * Dependency-injection seam: `createAppStore(repository)` builds a store bound to a
- * given StorageRepository. Tests inject a fake repository. The app-wide singleton lives
- * in `@/store/useAppStore` (it pulls in AsyncStorage); keeping this factory module free
- * of that import lets store unit tests run without mocking the native module. The
- * mutating actions (toggleCheck/toggleCategory/resetWeek) update completionLogs immutably
- * and persist optimistically through the repository.
+ * Dependency-injection seam: `createAppStore(repository, deps?)` builds a store bound to a
+ * given StorageRepository and a clock/id seam. Tests inject a fake repository and
+ * deterministic ids; the app-wide singleton lives in `@/store/useAppStore` (it pulls in
+ * AsyncStorage), keeping this factory module free of that import so store unit tests run
+ * without mocking the native module.
+ *
+ * Stage 3 adds the routine lifecycle actions (create/edit/setActive/hide/duplicate/delete).
+ * Their transition matrix (spec stage-3 §4.1) plus the D8.8 "today protection" invariant is
+ * the only non-trivial logic here: every edit/switch takes effect from tomorrow (first
+ * activation only takes effect today), old versions are never mutated (append-only), and
+ * the timeline is the single source of truth for date -> version resolution.
  */
 import { create } from 'zustand';
 import type { StoreApi, UseBoundStore } from 'zustand';
-import { weekDays } from '@/domain/date';
+import { addDays, weekDays } from '@/domain/date';
 import { CURRENT_SCHEMA_VERSION } from '@/domain/migration';
-import { activationOf, plan } from '@/domain/timeline';
+import {
+  buildRoutine,
+  buildVersion,
+  firstVersionId,
+  nextVersionId,
+} from '@/domain/routineBuild';
+import { draftFromRoutine, type RoutineDraft } from '@/domain/routineDraft';
+import { activationOf, plan, versionOf } from '@/domain/timeline';
 import type { StorageRepository } from '@/repository/StorageRepository';
-import type { AppState, Category, DateKey, DayLog } from '@/types/schema';
+import type { AppState, Category, DateKey, DayLog, Routine } from '@/types/schema';
 
 /** Fresh-install state: a valid, empty AppState at the current schema version. */
 export function emptyAppState(): AppState {
@@ -29,6 +41,24 @@ export function emptyAppState(): AppState {
     settings: { activeRoutineId: null },
   };
 }
+
+/** Outcome of a guarded action — currently only `deleteRoutine`. UI surfaces `reason` when not ok. */
+export type ActionResult = { ok: true } | { ok: false; reason: string };
+
+/**
+ * Non-deterministic seam: the wall clock and routine-id minting. Injected so the store
+ * stays deterministic under test (fixed timestamps, counter ids). Version ids are
+ * sequential and derived purely from the routine, so they are NOT part of this seam.
+ */
+export interface AppStoreDeps {
+  now: () => string;
+  newRoutineId: () => string;
+}
+
+const defaultDeps: AppStoreDeps = {
+  now: () => new Date().toISOString(),
+  newRoutineId: () => `rt_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+};
 
 export interface AppStore {
   /** The single AppState tree (PRD 4.2). Read via selectors, never mutated in place. */
@@ -52,6 +82,40 @@ export interface AppStore {
   toggleCategory: (date: DateKey, category: Category, value: boolean) => void;
   /** Clear the viewed week's completion logs only (PRD 5.10); routines/timeline untouched. */
   resetWeek: (weekStartMonday: DateKey) => void;
+
+  // --- Stage 3 routine lifecycle (spec stage-3 §4.1) ---
+  /**
+   * Create a new routine (single v_001 version) from an editor draft. Does NOT activate it
+   * and does NOT touch the timeline/settings (creation is not activation). Returns the new
+   * routine id.
+   */
+  createRoutine: (draft: RoutineDraft) => string;
+  /**
+   * Append a new RoutineVersion to a routine. If it is the active routine, append a
+   * timeline entry effective tomorrow (today's plan is protected, D8.8); if inactive, the
+   * timeline is untouched (the new version is picked up when it is later activated). Old
+   * versions are never mutated.
+   */
+  editRoutine: (routineId: string, draft: RoutineDraft, today: DateKey) => void;
+  /**
+   * Switch the active routine. First activation (no plan resolves for today) takes effect
+   * today; a switch (a plan already resolves) takes effect tomorrow so today is protected.
+   * `settings.activeRoutineId` changes immediately either way. No-op if already active.
+   */
+  setActiveRoutine: (routineId: string, today: DateKey) => void;
+  /** Mark a routine hidden (display-only; versions/timeline/computations untouched). */
+  hideRoutine: (routineId: string) => void;
+  /** Un-hide a routine (clears the display-only hidden flag). */
+  unhideRoutine: (routineId: string) => void;
+  /** Copy a routine's latest version into a brand-new routine. Returns the new id, or null. */
+  duplicateRoutine: (routineId: string) => string | null;
+  /**
+   * Permanently remove a routine. Allowed only for a routine that was never activated and
+   * is referenced by no completion log — i.e. no timeline entry and no log point at it.
+   * Deleting an activated routine would drop past dates' plan resolution and silently change
+   * past weekProgress (breaking past-immutability), so those are rejected (hide instead).
+   */
+  deleteRoutine: (routineId: string) => ActionResult;
 }
 
 const EMPTY_CHECKS: DayLog['checks'] = { aerobic: {}, anaerobic: {} };
@@ -84,10 +148,21 @@ function writeChecks(
   return { ...state, completionLogs: { ...state.completionLogs, [date]: log } };
 }
 
+/** Replace one routine in the list immutably (others keep reference identity). */
+function mapRoutine(state: AppState, routineId: string, fn: (r: Routine) => Routine): AppState {
+  return {
+    ...state,
+    routines: state.routines.map((r) => (r.id === routineId ? fn(r) : r)),
+  };
+}
+
 export type AppStoreApi = UseBoundStore<StoreApi<AppStore>>;
 
-/** Build a store bound to a specific repository (DI seam for tests and the app). */
-export function createAppStore(repository: StorageRepository): AppStoreApi {
+/** Build a store bound to a specific repository and clock/id seam (DI for tests and app). */
+export function createAppStore(
+  repository: StorageRepository,
+  deps: AppStoreDeps = defaultDeps,
+): AppStoreApi {
   return create<AppStore>((set, get) => {
     // Optimistic write: the store is updated immediately (UI reflects it now), then the
     // whole state is persisted asynchronously; only a failure is surfaced (PRD 6.3/8.3).
@@ -147,6 +222,125 @@ export function createAppStore(repository: StorageRepository): AppStoreApi {
         }
         if (!changed) return; // nothing logged that week -> no-op
         persist({ ...state, completionLogs });
+      },
+
+      createRoutine: (draft) => {
+        const { state } = get();
+        const routineId = deps.newRoutineId();
+        const createdAt = deps.now();
+        const routine = buildRoutine(draft, { routineId, versionId: firstVersionId(), createdAt });
+        // Append the new routine only; timeline and settings are untouched (not an activation).
+        persist({ ...state, routines: [...state.routines, routine] });
+        return routineId;
+      },
+
+      editRoutine: (routineId, draft, today) => {
+        const { state } = get();
+        const target = state.routines.find((r) => r.id === routineId);
+        if (target === undefined) return; // unknown routine -> no-op
+        const latest = target.versions[target.versions.length - 1];
+        const newVersion = buildVersion(draft, {
+          versionId: nextVersionId(target),
+          createdAt: deps.now(),
+        });
+        // A RoutineVersion captures the plan (restDays + days); the routine name is
+        // routine-level metadata. Only a real plan change appends a new version (and, for the
+        // active routine, a tomorrow-effective timeline entry). A rename alone just updates
+        // the name — no version churn and no misleading "applies tomorrow" banner. The name
+        // is always applied so a rename in the editor is never lost.
+        // Compare restDays order-independently (it is a set) so a mere toggle reorder is not
+        // treated as a plan change; days order is meaningful (slot order) and compared as-is.
+        const sameRestDays =
+          JSON.stringify([...latest.restDays].sort()) ===
+          JSON.stringify([...newVersion.restDays].sort());
+        const sameDays = JSON.stringify(latest.days) === JSON.stringify(newVersion.days);
+        const planChanged = !(sameRestDays && sameDays);
+        const name = draft.name.trim();
+        // Old versions keep reference identity (append-only).
+        let next = mapRoutine(state, routineId, (r) => ({
+          ...r,
+          name,
+          versions: planChanged ? [...r.versions, newVersion] : r.versions,
+        }));
+        if (planChanged && state.settings.activeRoutineId === routineId) {
+          next = {
+            ...next,
+            activationTimeline: [
+              ...next.activationTimeline,
+              { effectiveFrom: addDays(today, 1), routineId, versionId: newVersion.versionId },
+            ],
+          };
+        }
+        persist(next);
+      },
+
+      setActiveRoutine: (routineId, today) => {
+        const { state } = get();
+        if (state.settings.activeRoutineId === routineId) return; // already active -> no-op
+        const target = state.routines.find((r) => r.id === routineId);
+        if (target === undefined) return; // unknown routine -> no-op
+        const latest = target.versions[target.versions.length - 1];
+        // First activation (no plan resolves today) applies today; a switch applies tomorrow
+        // so today's already-running plan is protected (D8.8). The pointer moves immediately.
+        const isFirstActivation = versionOf(state, today) === null;
+        const effectiveFrom = isFirstActivation ? today : addDays(today, 1);
+        persist({
+          ...state,
+          activationTimeline: [
+            ...state.activationTimeline,
+            { effectiveFrom, routineId, versionId: latest.versionId },
+          ],
+          settings: { ...state.settings, activeRoutineId: routineId },
+        });
+      },
+
+      hideRoutine: (routineId) => {
+        const { state } = get();
+        if (!state.routines.some((r) => r.id === routineId)) return;
+        persist(mapRoutine(state, routineId, (r) => ({ ...r, hidden: true })));
+      },
+
+      unhideRoutine: (routineId) => {
+        const { state } = get();
+        if (!state.routines.some((r) => r.id === routineId)) return;
+        persist(mapRoutine(state, routineId, (r) => ({ ...r, hidden: false })));
+      },
+
+      duplicateRoutine: (routineId) => {
+        const { state } = get();
+        const source = state.routines.find((r) => r.id === routineId);
+        if (source === undefined) return null;
+        // Copy the latest version into a fresh draft (drops slotIds and the hidden flag),
+        // then build a brand-new routine. The original and the active pointer are untouched.
+        const newId = deps.newRoutineId();
+        const createdAt = deps.now();
+        const copy = buildRoutine(draftFromRoutine(source), {
+          routineId: newId,
+          versionId: firstVersionId(),
+          createdAt,
+        });
+        persist({ ...state, routines: [...state.routines, copy] });
+        return newId;
+      },
+
+      deleteRoutine: (routineId) => {
+        const { state } = get();
+        if (!state.routines.some((r) => r.id === routineId)) {
+          return { ok: false, reason: '존재하지 않는 루틴입니다.' };
+        }
+        if (state.settings.activeRoutineId === routineId) {
+          return { ok: false, reason: '활성 루틴은 삭제할 수 없습니다. 다른 루틴으로 전환한 뒤 삭제하세요.' };
+        }
+        // A routine referenced by the timeline resolves some past/today date's plan; deleting
+        // it would drop those dates from progress and change the past (PRD 4.1 immutability).
+        if (state.activationTimeline.some((a) => a.routineId === routineId)) {
+          return { ok: false, reason: '사용 기록이 있는 루틴은 삭제할 수 없습니다. 숨김만 가능합니다.' };
+        }
+        if (Object.values(state.completionLogs).some((log) => log.routineId === routineId)) {
+          return { ok: false, reason: '완료 기록이 있는 루틴은 삭제할 수 없습니다. 숨김만 가능합니다.' };
+        }
+        persist({ ...state, routines: state.routines.filter((r) => r.id !== routineId) });
+        return { ok: true };
       },
     };
   });
