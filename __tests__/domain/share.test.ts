@@ -62,6 +62,11 @@ function rawEncode(text: string): string {
   return Buffer.from(pako.deflate(text)).toString('base64url');
 }
 
+/** Test-only raw byte encoder: deflate arbitrary bytes (e.g. invalid UTF-8) and base64url them. */
+function rawEncodeBytes(bytes: Uint8Array): string {
+  return Buffer.from(pako.deflate(bytes)).toString('base64url');
+}
+
 /** Test-only raw decoder: independent (Buffer-based) inverse used to inspect serialized bytes. */
 function rawInflateToString(encoded: string): string {
   const std = encoded.replace(/-/g, '+').replace(/_/g, '/');
@@ -207,6 +212,23 @@ describe('malformed / hostile input', () => {
 
   it('rejects inflate output that is not JSON (parse-error)', () => {
     expect(deserializeRoutine(rawEncode('{ not valid json'), 1)).toEqual({
+      success: false,
+      reason: 'parse-error',
+    });
+  });
+
+  it('rejects invalid UTF-8 in the inflated bytes (parse-error)', () => {
+    // 0xff is never a valid UTF-8 lead byte; the strict decoder throws deterministically rather
+    // than reading out of bounds, and the throw surfaces as parse-error.
+    expect(deserializeRoutine(rawEncodeBytes(new Uint8Array([0xff, 0xfe])), 1)).toEqual({
+      success: false,
+      reason: 'parse-error',
+    });
+  });
+
+  it('rejects a truncated multi-byte UTF-8 sequence (parse-error)', () => {
+    // 0xed starts a 3-byte sequence but only one byte follows -> truncated -> throw -> parse-error.
+    expect(deserializeRoutine(rawEncodeBytes(new Uint8Array([0xed, 0x9c])), 1)).toEqual({
       success: false,
       reason: 'parse-error',
     });

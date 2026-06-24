@@ -134,32 +134,47 @@ function base64urlToBytes(input: string): Uint8Array {
   return out;
 }
 
-/** Decode UTF-8 bytes to a string (handles 1–4 byte sequences incl. surrogate pairs). */
+/**
+ * Decode UTF-8 bytes to a string (1–4 byte sequences incl. surrogate pairs). STRICT at the trust
+ * boundary: an invalid lead byte, a truncated sequence (not enough bytes remain), or a malformed
+ * continuation byte (not 0b10xxxxxx) THROWS rather than reading out of bounds and silently
+ * substituting 0. The caller runs this inside the JSON.parse try, so a throw surfaces as a
+ * deterministic `parse-error` instead of a non-deterministic "maybe parses to garbage".
+ */
 function utf8BytesToString(bytes: Uint8Array): string {
   let out = '';
   let i = 0;
   const len = bytes.length;
+  // Read the continuation byte at `index`, asserting it exists and is 0b10xxxxxx.
+  const cont = (index: number): number => {
+    const b = bytes[index];
+    if (index >= len || (b & 0xc0) !== 0x80) throw new Error('invalid UTF-8 continuation byte');
+    return b & 0x3f;
+  };
   while (i < len) {
     const b0 = bytes[i];
     i += 1;
     if (b0 < 0x80) {
       out += String.fromCharCode(b0);
-    } else if (b0 < 0xe0) {
-      const b1 = bytes[i] & 0x3f;
+    } else if (b0 >= 0xc2 && b0 < 0xe0) {
+      const b1 = cont(i);
       i += 1;
       out += String.fromCharCode(((b0 & 0x1f) << 6) | b1);
-    } else if (b0 < 0xf0) {
-      const b1 = bytes[i] & 0x3f;
-      const b2 = bytes[i + 1] & 0x3f;
+    } else if (b0 >= 0xe0 && b0 < 0xf0) {
+      const b1 = cont(i);
+      const b2 = cont(i + 1);
       i += 2;
       out += String.fromCharCode(((b0 & 0x0f) << 12) | (b1 << 6) | b2);
-    } else {
-      const b1 = bytes[i] & 0x3f;
-      const b2 = bytes[i + 1] & 0x3f;
-      const b3 = bytes[i + 2] & 0x3f;
+    } else if (b0 >= 0xf0 && b0 < 0xf5) {
+      const b1 = cont(i);
+      const b2 = cont(i + 1);
+      const b3 = cont(i + 2);
       i += 3;
       const cp = (((b0 & 0x07) << 18) | (b1 << 12) | (b2 << 6) | b3) - 0x10000;
       out += String.fromCharCode(0xd800 + (cp >> 10), 0xdc00 + (cp & 0x3ff));
+    } else {
+      // Lone continuation byte (0x80–0xC1), overlong lead (0xC0/0xC1), or out-of-range (>=0xF5).
+      throw new Error('invalid UTF-8 lead byte');
     }
   }
   return out;

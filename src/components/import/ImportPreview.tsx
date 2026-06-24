@@ -23,8 +23,10 @@ export function ImportPreview({ payload }: { payload: SharePayload }) {
       </Text>
       <Text style={{ color: color.fgMuted, fontSize: font.caption.size }}>
         휴식일:{' '}
-        {version.restDays.length > 0
-          ? version.restDays.map((w) => WEEKDAY_LABELS[w]).join(', ')
+        {restSet.size > 0
+          ? WEEKDAYS.filter((w) => restSet.has(w))
+              .map((w) => WEEKDAY_LABELS[w])
+              .join(', ')
           : '없음'}
       </Text>
 
