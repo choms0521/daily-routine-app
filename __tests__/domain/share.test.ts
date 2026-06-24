@@ -195,6 +195,11 @@ describe('malformed / hostile input', () => {
     });
   });
 
+  it('rejects an impossible base64 length of 1 mod 4 (decode-error)', () => {
+    // "aaaaa" is 5 valid base64 chars; 5 % 4 === 1 is not a producible base64 length.
+    expect(deserializeRoutine('aaaaa', 1)).toEqual({ success: false, reason: 'decode-error' });
+  });
+
   it('rejects valid base64url that is not a deflate stream (inflate-error)', () => {
     // "abcd" decodes to 3 bytes that are not a zlib header -> pako.inflate throws.
     expect(deserializeRoutine('abcd', 1)).toEqual({ success: false, reason: 'inflate-error' });

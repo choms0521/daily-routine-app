@@ -37,7 +37,8 @@ function messageFor(reason: DeserializeError): string {
   }
 }
 
-function decode(input: string): Result {
+// Decode always yields a concrete outcome (never the null "no attempt yet" state).
+function decode(input: string): Exclude<Result, null> {
   const r = deserializeRoutine(input, CURRENT_SCHEMA_VERSION);
   return r.success
     ? { kind: 'preview', payload: r.payload }
@@ -62,7 +63,12 @@ export default function ImportScreen() {
   const onScan = (data: string) => {
     if (scanHandled.current) return; // the camera fires per frame; handle the first hit only
     scanHandled.current = true;
-    setResult(decode(data));
+    const next = decode(data);
+    // On a decode failure the camera stays mounted (the error keeps the QR tab visible), so re-arm
+    // and let the user scan again without leaving the screen. A success replaces the camera with
+    // the preview, so it cannot re-fire.
+    if (next.kind === 'error') scanHandled.current = false;
+    setResult(next);
   };
 
   const reset = () => {

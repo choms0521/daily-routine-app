@@ -9,7 +9,7 @@
  *
  * Pipeline:
  *   export: payload -> JSON.stringify -> pako.deflate -> base64url
- *   import: base64url -> pako.inflate -> JSON.parse -> Zod validate -> schemaVersion check
+ *   import: base64url -> pako.inflate -> JSON.parse -> schemaVersion check -> Zod validate
  *
  * RN/Hermes guarantees neither atob/btoa nor Buffer, so the base64url and UTF-8 codecs are
  * spelled out here over Uint8Array rather than relying on a platform global.
@@ -111,6 +111,10 @@ function bytesToBase64url(bytes: Uint8Array): string {
 function base64urlToBytes(input: string): Uint8Array {
   const std = input.replace(/-/g, '+').replace(/_/g, '/').replace(/=+$/, '');
   const len = std.length;
+  // A base64 length of 1 (mod 4) is impossible — 3 bytes encode to 4 chars, so valid lengths are
+  // 0/2/3 (mod 4). Reject it up front so malformed input fails deterministically at the decode
+  // gate instead of silently dropping the orphan 6 bits and decoding to garbage.
+  if (len % 4 === 1) throw new Error('invalid base64url length');
   const out = new Uint8Array((len * 6) >> 3);
   let buffer = 0;
   let bits = 0;
@@ -238,9 +242,11 @@ export function deserializeRoutine(
   } catch {
     return { success: false, reason: 'inflate-error' };
   }
-  // Bomb guard: pako.inflate fully materializes the output before this check, so the transient
-  // allocation is bounded by the deflate ratio x MAX_INPUT_CHARS (tens of MB worst case — large
-  // but not a device OOM). A streaming abort-on-threshold would be the stricter future hardening.
+  // Bomb guard. NOTE: pako.inflate fully materializes the output BEFORE this check runs, so a
+  // crafted stream (bounded only by MAX_INPUT_CHARS) can transiently allocate up to DEFLATE's
+  // ~1032:1 max ratio before being rejected here. This caps what is *kept*, not what is
+  // *allocated* — it does not by itself prevent a large transient allocation. A streaming inflate
+  // that aborts once the running total crosses the threshold is the real fix (future hardening).
   if (inflated.length > MAX_INFLATED_BYTES) return { success: false, reason: 'payload-too-large' };
 
   let obj: unknown;
