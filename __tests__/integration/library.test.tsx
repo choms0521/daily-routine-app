@@ -73,7 +73,6 @@ describe('library', () => {
     });
     expect(view.getByTestId('active-badge-rt_B')).toBeTruthy();
     expect(view.queryByTestId('active-badge-rt_aXk92')).toBeNull();
-    expect(view.queryByTestId('active-badge-rt_aXk92')).toBeNull();
   });
 
   it('routes to the editor on "새 루틴"', async () => {

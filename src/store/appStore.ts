@@ -42,7 +42,7 @@ export function emptyAppState(): AppState {
   };
 }
 
-/** Outcome of a guarded action (delete/hide). UI surfaces `reason` when not ok. */
+/** Outcome of a guarded action — currently only `deleteRoutine`. UI surfaces `reason` when not ok. */
 export type ActionResult = { ok: true } | { ok: false; reason: string };
 
 /**
