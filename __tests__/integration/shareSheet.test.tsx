@@ -72,4 +72,13 @@ describe('ShareSheet', () => {
     expect(mockSetStringAsync).toHaveBeenCalledWith(buildDeepLink(encoded));
     expect(view.getByTestId('share-copied-msg')).toHaveTextContent('링크를 복사했습니다');
   });
+
+  it('shows a failure note (not an unhandled rejection) when the clipboard write rejects', async () => {
+    mockSetStringAsync.mockImplementationOnce(() => Promise.reject(new Error('denied')));
+    const view = await renderSheet();
+    await act(async () => {
+      fireEvent.press(view.getByTestId('share-copy-code'));
+    });
+    expect(view.getByTestId('share-copied-msg')).toHaveTextContent('복사에 실패했습니다');
+  });
 });

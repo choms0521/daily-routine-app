@@ -36,8 +36,11 @@ export const MAX_INFLATED_BYTES = 500_000;
 // --- Payload schema (single source of truth; types are inferred) ------------
 
 const sharedExerciseSchema = z.object({
-  name: z.string().min(1).max(MAX_NAME_LEN),
-  sets: z.string().max(MAX_SETS_LEN),
+  // Trim at the trust boundary so an imported exercise matches a hand-made one (the editor trims).
+  // `.trim()` runs before `.min(1)`, so a whitespace-only name is rejected (empty after trim);
+  // sets may legitimately be blank but is never stored with surrounding padding.
+  name: z.string().trim().min(1).max(MAX_NAME_LEN),
+  sets: z.string().trim().max(MAX_SETS_LEN),
 });
 
 const sharedDayPlanSchema = z.object({
@@ -67,7 +70,8 @@ export const sharePayloadSchema = z.object({
   schemaVersion: z.number().int().positive(),
   type: z.literal('routine-share'),
   routine: z.object({
-    name: z.string().min(1).max(MAX_NAME_LEN),
+    // Trim + non-empty after trim: a whitespace-only routine name would become '' in buildRoutine.
+    name: z.string().trim().min(1).max(MAX_NAME_LEN),
     version: z.object({
       // At most 7 (one per weekday); buildVersion canonicalizes/dedupes downstream, but capping
       // here rejects an obviously-malformed payload earlier at the trust boundary.

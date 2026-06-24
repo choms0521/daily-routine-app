@@ -24,7 +24,7 @@ export interface ShareSheetProps {
   encoded: string;
 }
 
-type Copied = 'code' | 'link' | null;
+type Copied = 'code' | 'link' | 'fail' | null;
 
 export function ShareSheet({ visible, onClose, routineName, encoded }: ShareSheetProps) {
   const { color, font, space, radius } = useTheme();
@@ -43,8 +43,15 @@ export function ShareSheet({ visible, onClose, routineName, encoded }: ShareShee
   };
 
   const copy = async (what: 'code' | 'link') => {
-    await Clipboard.setStringAsync(what === 'code' ? code : deepLink);
-    setCopied(what);
+    // copy() is fired from a press handler whose returned promise is not awaited, so a rejected
+    // clipboard write would surface as an unhandled rejection. Catch it here and only confirm on
+    // success; on failure show a failure note instead of a false "copied" message.
+    try {
+      await Clipboard.setStringAsync(what === 'code' ? code : deepLink);
+      setCopied(what);
+    } catch {
+      setCopied('fail');
+    }
   };
 
   return (
@@ -120,13 +127,19 @@ export function ShareSheet({ visible, onClose, routineName, encoded }: ShareShee
       <Text
         testID="share-copied-msg"
         style={{
-          color: color.success,
+          color: copied === 'fail' ? color.danger : color.success,
           fontSize: font.caption.size,
           textAlign: 'center',
           marginTop: space.s3,
           minHeight: font.caption.size + 2,
         }}>
-        {copied === 'code' ? '코드를 복사했습니다' : copied === 'link' ? '링크를 복사했습니다' : ''}
+        {copied === 'code'
+          ? '코드를 복사했습니다'
+          : copied === 'link'
+            ? '링크를 복사했습니다'
+            : copied === 'fail'
+              ? '복사에 실패했습니다'
+              : ''}
       </Text>
     </BottomSheet>
   );

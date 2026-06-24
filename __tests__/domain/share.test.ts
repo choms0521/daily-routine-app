@@ -192,6 +192,62 @@ describe('weekday completeness (sharedDaysSchema)', () => {
   });
 });
 
+describe('name/sets trimming at the trust boundary', () => {
+  it('trims surrounding whitespace from the routine name and exercise fields', () => {
+    const payload = validPayload();
+    const padded = {
+      ...payload,
+      routine: {
+        ...payload.routine,
+        name: '  여름 컨디셔닝  ',
+        version: {
+          ...payload.routine.version,
+          days: {
+            ...payload.routine.version.days,
+            mon: { aerobic: [{ name: '  러닝  ', sets: '  30분  ' }], anaerobic: [] },
+          },
+        },
+      },
+    };
+    const result = deserializeRoutine(encodePayload(padded), 1);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.payload.routine.name).toBe('여름 컨디셔닝');
+    expect(result.payload.routine.version.days.mon.aerobic[0].name).toBe('러닝');
+    expect(result.payload.routine.version.days.mon.aerobic[0].sets).toBe('30분');
+  });
+
+  it('rejects a whitespace-only routine name (empty after trim -> zod-validation)', () => {
+    const payload = validPayload();
+    const blank = { ...payload, routine: { ...payload.routine, name: '   ' } };
+    expect(deserializeRoutine(encodePayload(blank), 1)).toEqual({
+      success: false,
+      reason: 'zod-validation',
+    });
+  });
+
+  it('rejects a whitespace-only exercise name (empty after trim -> zod-validation)', () => {
+    const payload = validPayload();
+    const blank = {
+      ...payload,
+      routine: {
+        ...payload.routine,
+        version: {
+          ...payload.routine.version,
+          days: {
+            ...payload.routine.version.days,
+            mon: { aerobic: [{ name: '   ', sets: '30분' }], anaerobic: [] },
+          },
+        },
+      },
+    };
+    expect(deserializeRoutine(encodePayload(blank), 1)).toEqual({
+      success: false,
+      reason: 'zod-validation',
+    });
+  });
+});
+
 describe('malformed / hostile input', () => {
   it('rejects a non-base64url string (decode-error)', () => {
     expect(deserializeRoutine('not base64url!! 한글', 1)).toEqual({
