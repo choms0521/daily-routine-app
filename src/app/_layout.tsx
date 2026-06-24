@@ -34,6 +34,8 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="editor/[routineId]" options={{ presentation: 'card' }} />
+          {/* Deep-link target: workouttracker://import?d=... routes here (expo-router linking). */}
+          <Stack.Screen name="import" options={{ presentation: 'card' }} />
         </Stack>
         <StatusBar style="dark" />
       </ThemeProvider>

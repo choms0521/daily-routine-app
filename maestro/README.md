@@ -18,8 +18,10 @@
 | `stage2_persist.yaml` | 체크가 앱 재시작 후에도 유지 (사전에 활성 루틴 1개 필요) |
 | `stage3_create_edit.yaml` | 루틴 생성 → 활성화 → 체크 → 편집(새 버전) → 오늘/과거 유지 + 배너 |
 | `stage3_switch.yaml` | 두 번째 루틴 생성 → 전환 확인 시트 → 내일부 전환 → 배너 |
+| `stage4_share_import.yaml` | 루틴 생성 → 공유 시트(코드 복사) → 가져오기(붙여넣기) → 미리보기 → 라이브러리 추가 |
 
 > Stage 2 흐름은 devSeed 제거 이후 활성 루틴을 전제하므로, 단독 실행 시 `stage3_create_edit.yaml`로 먼저 루틴을 만든 뒤 이어서 실행한다.
+> `stage4_share_import.yaml`은 공유 코드 미리보기(`share-code-preview`)에서 `copyTextFrom`으로 전체 코드를 가져와 `pasteText`로 가져오기 입력에 붙여넣는다. 표시는 잘려 보여도 텍스트 내용은 전체가 보존된다.
 
 ## 동등한 결정적 커버리지 (현재 CI에서 실행됨)
 
@@ -30,10 +32,14 @@
 - 루틴 생성·편집(새 버전)·draft→커밋: `__tests__/integration/editor.test.tsx`, `__tests__/store/routineActions.test.ts`
 - 활성 전환(내일부)·확인 시트·배지 이동·배너: `__tests__/store/setActiveRoutine.test.ts`, `__tests__/integration/library.test.tsx`, `__tests__/integration/home.test.tsx`
 - 숨김·복제·삭제 가드(AC-5.4.3): `__tests__/store/libraryActions.test.ts`
+- 공유 직렬화 왕복·완료 로그 미포함·스키마 거부: `__tests__/domain/share.test.ts`
+- 가져오기(새 루틴·기존 상태 불변·slotId 재발급·7요일): `__tests__/store/importRoutine.test.ts`
+- 공유 시트(QR/코드/딥링크 복사)·가져오기 화면(코드/딥링크/QR 진입): `__tests__/integration/shareSheet.test.tsx`, `__tests__/integration/import.test.tsx`
 
 ## 실행 방법 (maestro와 dev build가 준비된 뒤)
 
 ```sh
 maestro test maestro/stage3_create_edit.yaml
 maestro test maestro/stage3_switch.yaml
+maestro test maestro/stage4_share_import.yaml
 ```

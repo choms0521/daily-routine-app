@@ -15,7 +15,9 @@ import { router } from 'expo-router';
 import { RoutineActionsSheet } from '@/components/library/RoutineActionsSheet';
 import { RoutineCard } from '@/components/library/RoutineCard';
 import { ActivationConfirmSheet } from '@/components/sheet/ActivationConfirmSheet';
+import { ShareSheet } from '@/components/sheet/ShareSheet';
 import { todayKey } from '@/domain/clock';
+import { serializeRoutine } from '@/domain/share';
 import {
   selectActiveRoutineId,
   selectLibraryRoutines,
@@ -37,6 +39,7 @@ export default function LibraryScreen() {
 
   const [menuRoutine, setMenuRoutine] = useState<LibraryRoutineVM | null>(null);
   const [switchTarget, setSwitchTarget] = useState<LibraryRoutineVM | null>(null);
+  const [shareTarget, setShareTarget] = useState<{ name: string; encoded: string } | null>(null);
 
   const activate = (vm: LibraryRoutineVM) => {
     setMenuRoutine(null);
@@ -74,9 +77,14 @@ export default function LibraryScreen() {
     }
   };
 
-  const share = () => {
+  const share = (vm: LibraryRoutineVM) => {
     setMenuRoutine(null);
-    Alert.alert('공유', '공유 기능은 다음 업데이트에서 제공됩니다.');
+    const routine = state.routines.find((r) => r.id === vm.id);
+    if (routine === undefined) return;
+    // Share the latest version only (history is not part of the template). The library serializes
+    // here so the sheet stays presentational and the store is never touched.
+    const latest = routine.versions[routine.versions.length - 1];
+    setShareTarget({ name: routine.name, encoded: serializeRoutine(latest, routine.name) });
   };
 
   return (
@@ -86,15 +94,26 @@ export default function LibraryScreen() {
           <Text style={{ color: color.fg, fontSize: font.title.size, fontWeight: font.title.weight }}>
             내 루틴
           </Text>
-          <Pressable
-            testID="new-routine-btn"
-            onPress={() => router.push('/editor/new')}
-            accessibilityRole="button"
-            hitSlop={8}>
-            <Text style={{ color: color.primary, fontSize: font.body.size, fontWeight: '600' }}>
-              + 새 루틴
-            </Text>
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s4 }}>
+            <Pressable
+              testID="import-routine-btn"
+              onPress={() => router.push('/import')}
+              accessibilityRole="button"
+              hitSlop={8}>
+              <Text style={{ color: color.fgMuted, fontSize: font.body.size, fontWeight: '600' }}>
+                가져오기
+              </Text>
+            </Pressable>
+            <Pressable
+              testID="new-routine-btn"
+              onPress={() => router.push('/editor/new')}
+              accessibilityRole="button"
+              hitSlop={8}>
+              <Text style={{ color: color.primary, fontSize: font.body.size, fontWeight: '600' }}>
+                + 새 루틴
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         {routines.length === 0 ? (
@@ -131,7 +150,7 @@ export default function LibraryScreen() {
         }}
         onHide={() => menuRoutine && hide(menuRoutine)}
         onDelete={() => menuRoutine && remove(menuRoutine)}
-        onShare={share}
+        onShare={() => menuRoutine && share(menuRoutine)}
       />
 
       <ActivationConfirmSheet
@@ -142,6 +161,13 @@ export default function LibraryScreen() {
           setSwitchTarget(null);
         }}
         onCancel={() => setSwitchTarget(null)}
+      />
+
+      <ShareSheet
+        visible={shareTarget !== null}
+        routineName={shareTarget?.name ?? ''}
+        encoded={shareTarget?.encoded ?? ''}
+        onClose={() => setShareTarget(null)}
       />
     </SafeAreaView>
   );
