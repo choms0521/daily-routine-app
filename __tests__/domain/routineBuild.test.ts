@@ -53,6 +53,14 @@ describe('buildVersion', () => {
   it('produces a Zod-valid RoutineVersion', () => {
     expect(() => RoutineVersionSchema.parse(version)).not.toThrow();
   });
+
+  it('canonicalizes restDays to Mon..Sun order (a set, not insertion order)', () => {
+    let d = setName(emptyDraft(), 'x');
+    d = toggleRestDay(d, 'sun'); // toggled sun first…
+    d = toggleRestDay(d, 'mon'); // …then mon
+    const v = buildVersion(d, { versionId: 'v_001', createdAt: 't' });
+    expect(v.restDays).toEqual(['mon', 'sun']); // canonical, not ['sun', 'mon']
+  });
 });
 
 describe('buildRoutine', () => {

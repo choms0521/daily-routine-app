@@ -248,9 +248,13 @@ export function createAppStore(
         // active routine, a tomorrow-effective timeline entry). A rename alone just updates
         // the name — no version churn and no misleading "applies tomorrow" banner. The name
         // is always applied so a rename in the editor is never lost.
-        const planChanged =
-          JSON.stringify([latest.restDays, latest.days]) !==
-          JSON.stringify([newVersion.restDays, newVersion.days]);
+        // Compare restDays order-independently (it is a set) so a mere toggle reorder is not
+        // treated as a plan change; days order is meaningful (slot order) and compared as-is.
+        const sameRestDays =
+          JSON.stringify([...latest.restDays].sort()) ===
+          JSON.stringify([...newVersion.restDays].sort());
+        const sameDays = JSON.stringify(latest.days) === JSON.stringify(newVersion.days);
+        const planChanged = !(sameRestDays && sameDays);
         const name = draft.name.trim();
         // Old versions keep reference identity (append-only).
         let next = mapRoutine(state, routineId, (r) => ({

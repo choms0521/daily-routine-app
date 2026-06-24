@@ -163,4 +163,13 @@ describe('editRoutine — rename (name is routine metadata, not version data)', 
     expect(after.routines[0].name).toBe('겨울 컨디셔닝');
     expect(after.routines[0].versions).toHaveLength(2); // plan changed -> version appended
   });
+
+  it('a rest-day toggle netting the same set is not a plan change (order-independent)', () => {
+    const { store } = makeStore(baseState); // v_001 restDays ['sun']
+    let draft = draftFromRoutine(baseState.routines[0]);
+    draft = toggleRestDay(draft, 'mon'); // ['sun','mon']
+    draft = toggleRestDay(draft, 'mon'); // back to ['sun'] — same set, different toggle history
+    store.getState().editRoutine('rt_aXk92', draft, TODAY);
+    expect(store.getState().state.routines[0].versions).toHaveLength(1); // no churn
+  });
 });

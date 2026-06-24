@@ -68,6 +68,8 @@ export function CategorySection({ category, slots, onAdd, onRemove, onMove }: Ca
               onPress={() => onMove(index, -1)}
               disabled={index === 0}
               accessibilityRole="button"
+              accessibilityLabel="위로 이동"
+              accessibilityState={{ disabled: index === 0 }}
               hitSlop={6}>
               <Text style={{ color: index === 0 ? color.fgSubtle : color.fgMuted, fontSize: font.body.size }}>
                 ↑
@@ -78,6 +80,8 @@ export function CategorySection({ category, slots, onAdd, onRemove, onMove }: Ca
               onPress={() => onMove(index, 1)}
               disabled={index === slots.length - 1}
               accessibilityRole="button"
+              accessibilityLabel="아래로 이동"
+              accessibilityState={{ disabled: index === slots.length - 1 }}
               hitSlop={6}>
               <Text
                 style={{
@@ -91,6 +95,7 @@ export function CategorySection({ category, slots, onAdd, onRemove, onMove }: Ca
               testID={`slot-remove-${category}-${index}`}
               onPress={() => onRemove(index)}
               accessibilityRole="button"
+              accessibilityLabel="삭제"
               hitSlop={6}>
               <Text style={{ color: color.danger, fontSize: font.body.size }}>✕</Text>
             </Pressable>

@@ -67,7 +67,9 @@ export function buildVersion(draft: RoutineDraft, ids: VersionIds): RoutineVersi
   return {
     versionId: ids.versionId,
     createdAt: ids.createdAt,
-    restDays: [...draft.restDays],
+    // restDays is semantically a set: canonicalize to Mon..Sun order (and dedupe) so a
+    // toggle off/on doesn't reorder the array and create a false version diff (PRD D8.6).
+    restDays: WEEKDAYS.filter((weekday) => draft.restDays.includes(weekday)),
     days: buildDays(draft),
   };
 }

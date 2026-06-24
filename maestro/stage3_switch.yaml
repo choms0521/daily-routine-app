@@ -22,8 +22,10 @@ appId: com.dailyroutine.app
 - tapOn:
     id: "editor-save"
 # Switch to the new routine: a routine is already active -> confirm sheet appears.
+# Tap by the known name (not a card-id regex, which could match the already-active card and
+# hide the activate action).
 - tapOn:
-    id: "routine-card-rt_.*"
+    text: "가벼운 산책"
 - tapOn:
     id: "routine-action-activate"
 - assertVisible:
