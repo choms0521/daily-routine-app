@@ -1,0 +1,16 @@
+# Stage 2 E2E flow 1: chip check -> light up -> progress increments (PRD AC-5.1.1, 5.6).
+#
+# Prereq: `maestro` CLI installed and a standalone/dev build (set its bundle id below).
+# In v1 the app runs in Expo Go, which Maestro cannot target by project URL reliably, so
+# this flow runs against a dev build. The same loop is proven deterministically by
+# __tests__/integration/home.test.tsx ("chip tap -> 1/8 -> 2/8").
+appId: com.dailyroutine.app
+---
+- launchApp
+- assertVisible: "여름 컨디셔닝" # active routine name in the header
+- assertVisible: "오늘" # today's card tag
+- tapOn:
+    text: "유산소"
+    index: 1 # today's aerobic chip (Mon..Sat order; index 1 == Tue)
+- assertVisible: "✓" # chip lit up (completed)
+- assertNotVisible: "0 / 8 · 0%" # progress numerator advanced off zero
