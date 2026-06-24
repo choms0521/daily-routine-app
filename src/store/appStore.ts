@@ -238,17 +238,27 @@ export function createAppStore(
         const { state } = get();
         const target = state.routines.find((r) => r.id === routineId);
         if (target === undefined) return; // unknown routine -> no-op
+        const latest = target.versions[target.versions.length - 1];
         const newVersion = buildVersion(draft, {
           versionId: nextVersionId(target),
           createdAt: deps.now(),
         });
-        // Append the new version (old versions keep reference identity -> append-only).
+        // A RoutineVersion captures the plan (restDays + days); the routine name is
+        // routine-level metadata. Only a real plan change appends a new version (and, for the
+        // active routine, a tomorrow-effective timeline entry). A rename alone just updates
+        // the name — no version churn and no misleading "applies tomorrow" banner. The name
+        // is always applied so a rename in the editor is never lost.
+        const planChanged =
+          JSON.stringify([latest.restDays, latest.days]) !==
+          JSON.stringify([newVersion.restDays, newVersion.days]);
+        const name = draft.name.trim();
+        // Old versions keep reference identity (append-only).
         let next = mapRoutine(state, routineId, (r) => ({
           ...r,
-          versions: [...r.versions, newVersion],
+          name,
+          versions: planChanged ? [...r.versions, newVersion] : r.versions,
         }));
-        // Only an active routine's edit needs a timeline entry, effective tomorrow (D8.8).
-        if (state.settings.activeRoutineId === routineId) {
+        if (planChanged && state.settings.activeRoutineId === routineId) {
           next = {
             ...next,
             activationTimeline: [

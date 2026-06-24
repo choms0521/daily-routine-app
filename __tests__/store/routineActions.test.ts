@@ -139,3 +139,28 @@ describe('editRoutine — AC-5.3.4 rest-day past judgment', () => {
     expect(isRestDay(after, '2026-06-28')).toBe(false); // future Sunday, v_002 (sat rest)
   });
 });
+
+describe('editRoutine — rename (name is routine metadata, not version data)', () => {
+  it('applies a new name and, for a rename only, appends no version or timeline entry', () => {
+    const { store } = makeStore(baseState);
+    const draft = setName(draftFromRoutine(baseState.routines[0]), '겨울 컨디셔닝'); // only the name changes
+    const beforeTimeline = store.getState().state.activationTimeline.length;
+    store.getState().editRoutine('rt_aXk92', draft, TODAY);
+    const after = store.getState().state;
+
+    expect(after.routines[0].name).toBe('겨울 컨디셔닝'); // rename is not lost
+    expect(after.routines[0].versions).toHaveLength(1); // no version churn on a pure rename
+    expect(after.activationTimeline).toHaveLength(beforeTimeline); // no misleading "tomorrow" entry
+  });
+
+  it('applies a new name alongside a plan change (and appends the version)', () => {
+    const { store } = makeStore(baseState);
+    let draft = setName(draftFromRoutine(baseState.routines[0]), '겨울 컨디셔닝');
+    draft = addSlot(draft, 'mon', 'aerobic', { name: '추가', sets: '10분' });
+    store.getState().editRoutine('rt_aXk92', draft, TODAY);
+    const after = store.getState().state;
+
+    expect(after.routines[0].name).toBe('겨울 컨디셔닝');
+    expect(after.routines[0].versions).toHaveLength(2); // plan changed -> version appended
+  });
+});

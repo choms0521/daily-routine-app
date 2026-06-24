@@ -22,7 +22,10 @@ appId: com.dailyroutine.app
 - tapOn:
     id: "exercise-add-confirm"
 - tapOn:
-    id: "editor-save" # createRoutine -> back to library
+    id: "editor-save" # createRoutine -> router.back() returns to the Home empty state
+# The editor was opened from Home, so switch to the Library tab before touching its cards.
+- tapOn:
+    text: "루틴"
 # Activate it from the library (first activation -> immediate, no confirm sheet).
 - tapOn:
     id: "routine-card-rt_.*" # the freshly created routine
@@ -30,10 +33,12 @@ appId: com.dailyroutine.app
     id: "routine-action-activate"
 - assertVisible:
     id: "active-badge-rt_.*"
-# Home reflects the active routine; check today, then edit and confirm today stays intact.
+# Home reflects the active routine; then return to the Library tab to edit it.
 - tapOn:
     text: "홈"
 - assertVisible: "여름 컨디셔닝"
+- tapOn:
+    text: "루틴"
 - tapOn:
     id: "routine-card-rt_.*" # (library) reopen to edit
 - tapOn:

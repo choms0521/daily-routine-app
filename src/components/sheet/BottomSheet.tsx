@@ -27,10 +27,13 @@ export function BottomSheet({ visible, onClose, children, testID }: BottomSheetP
       <Pressable
         testID={testID ? `${testID}-backdrop` : undefined}
         accessibilityRole="button"
+        accessibilityLabel="닫기"
         onPress={onClose}
         style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.4)', justifyContent: 'flex-end' }}>
         <Pressable
-          // Absorbs body taps so they don't reach the backdrop's onClose.
+          // Absorbs body taps so they don't reach the backdrop's onClose. It is not a real
+          // control, so it is hidden from assistive tech (accessible={false}).
+          accessible={false}
           onPress={() => {}}
           testID={testID}
           style={{

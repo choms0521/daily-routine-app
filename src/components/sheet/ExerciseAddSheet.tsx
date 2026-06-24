@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { BottomSheet } from '@/components/sheet/BottomSheet';
+import { CATEGORY_LABELS } from '@/constants/labels';
 import { catalogFor } from '@/constants/exerciseCatalog';
 import type { SlotDraft } from '@/domain/routineDraft';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -19,8 +20,6 @@ export interface ExerciseAddSheetProps {
   onClose: () => void;
   onAdd: (slot: SlotDraft) => void;
 }
-
-const CATEGORY_LABEL: Record<Category, string> = { aerobic: '유산소', anaerobic: '무산소' };
 
 export function ExerciseAddSheet({ visible, category, onClose, onAdd }: ExerciseAddSheetProps) {
   const { color, font, space, radius } = useTheme();
@@ -56,7 +55,7 @@ export function ExerciseAddSheet({ visible, category, onClose, onAdd }: Exercise
   return (
     <BottomSheet visible={visible} onClose={close} testID="exercise-add-sheet">
       <Text style={{ color: color.fg, fontSize: font.subtitle.size, fontWeight: font.subtitle.weight }}>
-        {CATEGORY_LABEL[category]} 운동 추가
+        {CATEGORY_LABELS[category]} 운동 추가
       </Text>
 
       <Text style={{ color: color.fgMuted, fontSize: font.caption.size, marginTop: space.s4, marginBottom: space.s2 }}>
