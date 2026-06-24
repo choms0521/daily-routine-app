@@ -1,0 +1,69 @@
+# Stage 4 E2E flow: create -> share (copy code) -> import (paste) -> preview -> add to library.
+#
+# Prereq: `maestro` CLI installed and a standalone/dev build (bundle id below). The app starts
+# empty (no dev seed), so this flow creates the routine it then shares. The share code preview
+# (id: share-code-preview) holds the FULL base64url string even though it renders truncated, so
+# copyTextFrom captures the whole code for pasteText. The same roundtrip and the "no completion
+# logs in the payload" guarantee are proven deterministically by __tests__/domain/share.test.ts,
+# __tests__/store/importRoutine.test.ts, and __tests__/integration/{shareSheet,import}.test.tsx.
+appId: com.dailyroutine.app
+---
+- launchApp
+# Empty first-run state -> create a routine to share.
+- assertVisible: "아직 루틴이 없습니다"
+- tapOn:
+    id: "create-first-routine-btn"
+- assertVisible:
+    id: "editor-save"
+- inputText: "여름 컨디셔닝"
+- tapOn:
+    id: "add-exercise-aerobic"
+- tapOn:
+    text: "러닝"
+- tapOn:
+    id: "exercise-add-confirm"
+- tapOn:
+    id: "editor-save" # createRoutine -> back to Home
+# Go to the Library tab and open the share sheet for the new routine.
+- tapOn:
+    text: "루틴"
+- tapOn:
+    id: "routine-card-rt_.*"
+- tapOn:
+    id: "routine-action-share"
+- assertVisible:
+    id: "share-sheet"
+- assertVisible:
+    id: "qr-view" # a small routine fits a single-frame QR
+# Capture the full code, then copy it to the device clipboard too (button path).
+- copyTextFrom:
+    id: "share-code-preview"
+- tapOn:
+    id: "share-copy-code"
+- assertVisible: "코드를 복사했습니다"
+- tapOn:
+    id: "share-sheet-backdrop" # dismiss the sheet
+# Open the import screen and paste the captured code.
+- tapOn:
+    id: "import-routine-btn"
+- assertVisible:
+    id: "import-code-input"
+- tapOn:
+    id: "import-code-input"
+- pasteText
+- tapOn:
+    id: "import-preview-btn"
+# Preview shows the imported template (the routine name and an exercise).
+- assertVisible:
+    id: "import-preview"
+- assertVisible: "여름 컨디셔닝"
+- assertVisible: "러닝"
+- tapOn:
+    id: "import-add"
+- assertVisible:
+    id: "import-added"
+- tapOn:
+    id: "import-go-library"
+# The library now lists two routines (the original + the imported copy).
+- assertVisible:
+    id: "routine-card-rt_.*"

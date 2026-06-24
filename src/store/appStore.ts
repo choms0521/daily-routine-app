@@ -27,6 +27,7 @@ import {
   nextVersionId,
 } from '@/domain/routineBuild';
 import { draftFromRoutine, type RoutineDraft } from '@/domain/routineDraft';
+import { draftFromSharePayload, type SharePayload } from '@/domain/share';
 import { activationOf, plan, versionOf } from '@/domain/timeline';
 import type { StorageRepository } from '@/repository/StorageRepository';
 import type { AppState, Category, DateKey, DayLog, Routine } from '@/types/schema';
@@ -116,6 +117,16 @@ export interface AppStore {
    * past weekProgress (breaking past-immutability), so those are rejected (hide instead).
    */
   deleteRoutine: (routineId: string) => ActionResult;
+
+  // --- Stage 4 share/import (spec stage-4 §5.3) ---
+  /**
+   * Import a shared routine payload as a brand-new routine. The payload is converted to a draft
+   * and built like any hand-made routine, so a fresh routine id is minted and slot ids are
+   * reissued positionally (PRD 4.8); the version is a normal v_001. It is NOT activated, and
+   * existing routines, completion logs, the timeline, and the active pointer are untouched
+   * (AC-5.5.2). Returns the new routine id.
+   */
+  importRoutine: (payload: SharePayload) => string;
 }
 
 const EMPTY_CHECKS: DayLog['checks'] = { aerobic: {}, anaerobic: {} };
@@ -341,6 +352,21 @@ export function createAppStore(
         }
         persist({ ...state, routines: state.routines.filter((r) => r.id !== routineId) });
         return { ok: true };
+      },
+
+      importRoutine: (payload) => {
+        const { state } = get();
+        const routineId = deps.newRoutineId();
+        const createdAt = deps.now();
+        // Built exactly like a hand-made routine: fresh id, reissued slot ids, a normal v_001.
+        const routine = buildRoutine(draftFromSharePayload(payload), {
+          routineId,
+          versionId: firstVersionId(),
+          createdAt,
+        });
+        // Append only; existing routines, logs, timeline, and the active pointer are untouched.
+        persist({ ...state, routines: [...state.routines, routine] });
+        return routineId;
       },
     };
   });
