@@ -24,9 +24,13 @@ export type ISOTimestamp = string;
 
 export const WeekdaySchema = z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']);
 export type Weekday = z.infer<typeof WeekdaySchema>;
+/** Canonical Monday-first weekday order (editor day tabs, draft day iteration). */
+export const WEEKDAYS: readonly Weekday[] = WeekdaySchema.options;
 
 export const CategorySchema = z.enum(['aerobic', 'anaerobic']);
 export type Category = z.infer<typeof CategorySchema>;
+/** Canonical category order (editor sections, slot-id prefixing). */
+export const CATEGORIES: readonly Category[] = CategorySchema.options;
 
 export const ExerciseSlotSchema = z.object({
   // Stable position id within a (version, weekday, category) scope (PRD 4.4).

@@ -9,27 +9,22 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { seedIfEmpty } from '@/store/devSeed';
 import { useAppStore } from '@/store/useAppStore';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 
 export default function RootLayout() {
-  // Load persisted state on app start; in dev, seed the sample routine when empty so the
-  // home is exercisable before Stage 3's routine editor exists.
+  // Load persisted state on app start. Stage 3 ships the routine editor, so a fresh install
+  // starts empty and the user creates their first routine in-app (the Stage 2 dev seed is
+  // gone). A failed load records hydrateError (not swallowed) and proceeds with empty state.
   useEffect(() => {
     useAppStore
       .getState()
       .hydrate()
       .catch((e: unknown) => {
-        // Storage unreadable/corrupted: record it (do not swallow) and proceed with an
-        // empty state so the app still starts. The flag is available for a Stage 5 surface.
         useAppStore.setState({
           hydrated: true,
           hydrateError: e instanceof Error ? e.message : String(e),
         });
-      })
-      .finally(() => {
-        if (__DEV__) seedIfEmpty(useAppStore);
       });
   }, []);
 
@@ -38,6 +33,7 @@ export default function RootLayout() {
       <ThemeProvider>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="editor/[routineId]" options={{ presentation: 'card' }} />
         </Stack>
         <StatusBar style="dark" />
       </ThemeProvider>

@@ -5,22 +5,13 @@
  * version resolution itself (architecture appendix rule 3 — "Stage 2 displays, Stage 1
  * computes").
  */
-import { addDays, weekDays, weekStartOf, weekdayOf } from '@/domain/date';
+import { WEEKDAY_LABELS } from '@/constants/labels';
+import { addDays, compareDateKey, weekDays, weekStartOf, weekdayOf } from '@/domain/date';
 import { categoryDone, isRestDay } from '@/domain/completion';
 import { weekProgress, type WeekProgress } from '@/domain/progress';
 import { streak } from '@/domain/streak';
 import { plan } from '@/domain/timeline';
-import type { AppState, DateKey, DayPlan, Weekday } from '@/types/schema';
-
-const WEEKDAY_LABELS: Record<Weekday, string> = {
-  mon: '월',
-  tue: '화',
-  wed: '수',
-  thu: '목',
-  fri: '금',
-  sat: '토',
-  sun: '일',
-};
+import type { AppState, DateKey, DayPlan, Routine, Weekday } from '@/types/schema';
 
 /** "6.22" style short label for a date key (no zero-padding, matches the PRD concept). */
 function dateLabel(date: DateKey): string {
@@ -67,6 +58,63 @@ export interface DayViewModel {
   aerobicDone: boolean;
   anaerobicDone: boolean;
   checks: { aerobic: Record<string, boolean>; anaerobic: Record<string, boolean> };
+}
+
+// --- Library selectors (Stage 3) ---
+
+export interface LibraryRoutineVM {
+  id: string;
+  name: string;
+  versionCount: number;
+  isActive: boolean;
+}
+
+function toLibraryVM(routine: Routine, activeRoutineId: string | null): LibraryRoutineVM {
+  return {
+    id: routine.id,
+    name: routine.name,
+    versionCount: routine.versions.length,
+    isActive: routine.id === activeRoutineId,
+  };
+}
+
+/** Visible (non-hidden) routines as library cards; the active one is flagged. */
+export function selectLibraryRoutines(state: AppState): LibraryRoutineVM[] {
+  const activeId = state.settings.activeRoutineId;
+  return state.routines
+    .filter((r) => r.hidden !== true)
+    .map((r) => toLibraryVM(r, activeId));
+}
+
+/** Hidden routines (for an optional "show hidden" affordance). */
+export function selectHiddenRoutines(state: AppState): LibraryRoutineVM[] {
+  const activeId = state.settings.activeRoutineId;
+  return state.routines.filter((r) => r.hidden === true).map((r) => toLibraryVM(r, activeId));
+}
+
+/** The selected active routine id (PRD 5.4 — the "next active", may differ from today's plan). */
+export function selectActiveRoutineId(state: AppState): string | null {
+  return state.settings.activeRoutineId;
+}
+
+export interface PendingActivation {
+  routineName: string;
+  effectiveFrom: DateKey;
+}
+
+/**
+ * A future-dated activation that has not taken effect yet (switch / active-routine edit):
+ * the last timeline entry with effectiveFrom > today. Drives the home "내일부터 적용" banner.
+ * Returns null when today's plan is already the latest (no pending change).
+ */
+export function selectPendingActivation(state: AppState, today: DateKey): PendingActivation | null {
+  const timeline = state.activationTimeline;
+  if (timeline.length === 0) return null;
+  const last = timeline[timeline.length - 1];
+  if (compareDateKey(last.effectiveFrom, today) <= 0) return null; // already in effect
+  const routine = state.routines.find((r) => r.id === last.routineId);
+  if (routine === undefined) return null;
+  return { routineName: routine.name, effectiveFrom: last.effectiveFrom };
 }
 
 /** Per-day view models for the 7 days of the viewed week (Mon..Sun). */
