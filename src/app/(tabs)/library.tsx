@@ -88,8 +88,8 @@ export default function LibraryScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: color.bg }} edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: space.s6, gap: space.s4 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: color.surface }} edges={['top']}>
+      <ScrollView contentContainerStyle={{ padding: space.s5, gap: space.s4 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text style={{ color: color.fg, fontSize: font.title.size, fontWeight: font.title.weight }}>
             내 루틴
