@@ -3,11 +3,13 @@
  * single JSON key. Migration + validation run inside load() at hydrate time (spec §5.3).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { backupBeforeMigrate, CURRENT_SCHEMA_VERSION, migrate, schemaVersionOf } from '@/domain/migration';
+import { CURRENT_SCHEMA_VERSION, migrate, schemaVersionOf } from '@/domain/migration';
 import type { AppState } from '@/types/schema';
 import type { StorageRepository } from '@/repository/StorageRepository';
 
 const STORAGE_KEY = 'workout-tracker:appstate';
+// Pre-migration backup of the original raw, so an upgrade has a recovery point (PRD 8.4).
+const BACKUP_KEY = 'workout-tracker:appstate.backup.preMigration';
 
 export class AsyncStorageRepository implements StorageRepository {
   async load(): Promise<AppState | null> {
@@ -23,9 +25,15 @@ export class AsyncStorageRepository implements StorageRepository {
         cause: error,
       });
     }
-    // Back up the original before migrating an older payload, then migrate + validate.
+    // Pre-migration safety net (PRD 8.4 / 10.2): before upgrading an older payload, keep the
+    // original raw under a backup key so a later save can't overwrite it with no recovery
+    // point. Once we're already on the current version, clear any stale backup from a past
+    // upgrade (load() never writes the migrated result, so migrate() throwing leaves the
+    // original STORAGE_KEY value intact — no rollback machinery needed).
     if (schemaVersionOf(parsed) < CURRENT_SCHEMA_VERSION) {
-      await backupBeforeMigrate(parsed);
+      await AsyncStorage.setItem(BACKUP_KEY, raw);
+    } else {
+      await AsyncStorage.removeItem(BACKUP_KEY);
     }
     return migrate(parsed);
   }

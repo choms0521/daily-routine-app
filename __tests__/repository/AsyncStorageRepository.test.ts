@@ -11,6 +11,7 @@ import { AsyncStorageRepository } from '@/repository/AsyncStorageRepository';
 import { baseState, clone } from '../fixtures/baseState';
 
 const STORAGE_KEY = 'workout-tracker:appstate';
+const BACKUP_KEY = 'workout-tracker:appstate.backup.preMigration';
 
 describe('AsyncStorageRepository', () => {
   beforeEach(async () => {
@@ -45,5 +46,22 @@ describe('AsyncStorageRepository', () => {
   it('rejects corrupted (non-JSON) storage with a contextual error', async () => {
     await AsyncStorage.setItem(STORAGE_KEY, '{not valid json');
     await expect(new AsyncStorageRepository().load()).rejects.toThrow(/not valid JSON/);
+  });
+
+  it('backs up the original raw before migrating a v0 payload', async () => {
+    const v0 = clone(baseState) as Record<string, unknown>;
+    v0.schemaVersion = 0;
+    const rawV0 = JSON.stringify(v0);
+    await AsyncStorage.setItem(STORAGE_KEY, rawV0);
+    await new AsyncStorageRepository().load();
+    // The exact pre-migration bytes are kept so a later save can be recovered from.
+    expect(await AsyncStorage.getItem(BACKUP_KEY)).toBe(rawV0);
+  });
+
+  it('clears a stale pre-migration backup when loading current-version state', async () => {
+    await AsyncStorage.setItem(BACKUP_KEY, '{"old":"backup"}');
+    await new AsyncStorageRepository().save(baseState);
+    await new AsyncStorageRepository().load();
+    expect(await AsyncStorage.getItem(BACKUP_KEY)).toBeNull();
   });
 });
