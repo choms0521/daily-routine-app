@@ -1,6 +1,11 @@
 /**
  * CategoryChip (Day 3): color encodes completion (achromatic idle, Toss Blue done) with
  * no category color difference; label distinguishes category; chip vs chevron callbacks.
+ *
+ * Stage 5 (PRD 6.3): the idle↔done background now tweens via reanimated interpolateColor,
+ * which emits a token's hex as its rgba equivalent (#F2F4F6 → rgba(242, 244, 246, 1),
+ * #E8F1FF → rgba(232, 241, 255, 1)). The asserted rgba values are exact equivalents of the
+ * chipIdleBg/primaryWeak tokens (still verified as hex in theme/tokens.test).
  */
 import { render, fireEvent } from '@testing-library/react-native';
 import { CategoryChip } from '@/components/chip/CategoryChip';
@@ -12,21 +17,21 @@ describe('CategoryChip', () => {
     const view = await render(
       <CategoryChip category="aerobic" isDone={false} expanded={false} onToggle={noop} onExpand={noop} />,
     );
-    expect(view.getByTestId('chip-aerobic')).toHaveStyle({ backgroundColor: '#F2F4F6' });
+    expect(view.getByTestId('chip-aerobic')).toHaveStyle({ backgroundColor: 'rgba(242, 244, 246, 1)' });
   });
 
   it('lights up Toss Blue when done (#E8F1FF)', async () => {
     const view = await render(
       <CategoryChip category="aerobic" isDone expanded={false} onToggle={noop} onExpand={noop} />,
     );
-    expect(view.getByTestId('chip-aerobic')).toHaveStyle({ backgroundColor: '#E8F1FF' });
+    expect(view.getByTestId('chip-aerobic')).toHaveStyle({ backgroundColor: 'rgba(232, 241, 255, 1)' });
   });
 
   it('uses the same done color for anaerobic (no category color difference)', async () => {
     const view = await render(
       <CategoryChip category="anaerobic" isDone expanded={false} onToggle={noop} onExpand={noop} />,
     );
-    expect(view.getByTestId('chip-anaerobic')).toHaveStyle({ backgroundColor: '#E8F1FF' });
+    expect(view.getByTestId('chip-anaerobic')).toHaveStyle({ backgroundColor: 'rgba(232, 241, 255, 1)' });
   });
 
   it('labels the category by text regardless of completion', async () => {
