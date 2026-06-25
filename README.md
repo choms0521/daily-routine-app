@@ -52,4 +52,4 @@ npm run lint          # ESLint
 - `docs/spec/` — 설계서: 아키텍처·데이터 모델·화면 구조
 - `docs/development/` — 개발계획서: day-by-day 실행 계획과 테스트
 
-자세한 규약은 `CLAUDE.md`를 참고한다.
+각 문서는 역할 폴더 아래에 작성일 날짜 폴더(`YYYY-MM-DD`)를 만들고 그 안에 둔다: `docs/<역할>/<YYYY-MM-DD>/<문서>.md` (예: `docs/prd/2026-06-23/workout-tracker-prd.md`). 자세한 규약은 `CLAUDE.md`를 참고한다.
