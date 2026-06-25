@@ -5,7 +5,7 @@
  */
 import { Tabs } from 'expo-router';
 
-import { DumbbellIcon, HomeIcon } from '@/components/ui/icons';
+import { DumbbellIcon, HomeIcon, SettingsIcon } from '@/components/ui/icons';
 import { useTheme } from '@/theme/ThemeProvider';
 
 export default function TabsLayout() {
@@ -30,6 +30,13 @@ export default function TabsLayout() {
         options={{
           title: '루틴',
           tabBarIcon: ({ color: c, size }) => <DumbbellIcon color={c} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: '설정',
+          tabBarIcon: ({ color: c, size }) => <SettingsIcon color={c} size={size} />,
         }}
       />
     </Tabs>

@@ -4,7 +4,7 @@
  * bar's active/inactive tint flows straight through. Replaces the placeholder dot/square
  * tab glyphs.
  */
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 export type IconProps = { color: string; size?: number };
 
@@ -49,6 +49,20 @@ export function FlameIcon({ color, size = 24 }: IconProps) {
       <Path
         d="M12 3c.6 3-1.8 4.2-3 6-1 1.5-1.5 3-1.5 4.3A4.5 4.5 0 0 0 12 18a4.5 4.5 0 0 0 4.5-4.7c0-1-.3-1.9-.8-2.6-.4.7-1 1.1-1.7 1.1.9-2.4-.2-5.4-2-8.8Z"
         fill={color}
+      />
+    </Svg>
+  );
+}
+
+export function SettingsIcon({ color, size = 24 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={3.2} stroke={color} strokeWidth={2} />
+      <Path
+        d="M12 2.5v2.6M12 18.9v2.6M21.5 12h-2.6M5.1 12H2.5M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8M18.7 18.7l-1.8-1.8M7.1 7.1 5.3 5.3"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
       />
     </Svg>
   );
