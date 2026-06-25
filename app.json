@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "dr-init",
-    "slug": "dr-init",
+    "name": "dailyroutine",
+    "slug": "dailyroutine",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
