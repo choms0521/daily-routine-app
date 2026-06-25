@@ -4,9 +4,12 @@
  * bar's active/inactive tint flows straight through. Replaces the placeholder dot/square
  * tab glyphs.
  */
+import type { ColorValue } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-export type IconProps = { color: string; size?: number };
+// ColorValue (not string) so the expo-router tab bar's active/inactive tint flows straight
+// through, and react-native-svg's fill/stroke (both ColorValue) accept it without a cast.
+export type IconProps = { color: ColorValue; size?: number };
 
 export function HomeIcon({ color, size = 24 }: IconProps) {
   return (

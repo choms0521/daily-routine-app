@@ -2,7 +2,8 @@
  * Backup file I/O (PRD 8.5) — the platform shell around the pure domain/backup functions.
  * This is the one layer jest can't meaningfully exercise (native file write / share sheet /
  * document picker), so it stays thin: all decode/validate logic lives in domain/backup, which
- * is fully tested. Verified live on the simulator.
+ * is fully tested. The native I/O here is not covered by jest and has not been verified on a
+ * device yet — exercise the export/import round-trip on a real device before relying on it.
  *
  * expo SDK 56 file API: the `File`/`Paths` classes (the top-level readAsStringAsync etc. are
  * deprecated and throw at runtime — see the SDK 56 filesystem docs).
