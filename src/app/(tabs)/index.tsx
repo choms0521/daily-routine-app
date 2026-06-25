@@ -19,6 +19,7 @@ import { WeekEmptyState } from '@/components/home/WeekEmptyState';
 import { WeekNav } from '@/components/home/WeekNav';
 import { ProgressBar } from '@/components/progress/ProgressBar';
 import { StreakBadge } from '@/components/progress/StreakBadge';
+import { Card } from '@/components/ui/Card';
 import { addDays, weekStartOf } from '@/domain/date';
 import { todayKey } from '@/domain/clock';
 import {
@@ -51,9 +52,9 @@ export default function HomeScreen() {
   const pendingActivation = selectPendingActivation(state, today);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: color.bg }} edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: space.s6, gap: space.s5 }}>
-        <View style={{ gap: space.s3 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: color.surface }} edges={['top']}>
+      <ScrollView contentContainerStyle={{ padding: space.s5, gap: space.s4 }}>
+        <Card style={{ gap: space.s4 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <View style={{ gap: space.s1, flexShrink: 1 }}>
               <Text style={{ color: color.fgMuted, fontSize: font.body.size }}>오늘의 운동</Text>
@@ -72,16 +73,20 @@ export default function HomeScreen() {
           />
 
           <ProgressBar done={progress.done} total={progress.total} pct={progress.pct} />
-        </View>
+        </Card>
 
         {pendingActivation !== null ? (
           <HomeBanner routineName={pendingActivation.routineName} />
         ) : null}
 
         {state.routines.length === 0 ? (
-          <NoRoutineState />
+          <Card>
+            <NoRoutineState />
+          </Card>
         ) : progress.total === 0 ? (
-          <WeekEmptyState />
+          <Card>
+            <WeekEmptyState />
+          </Card>
         ) : (
           <View style={{ gap: space.s3 }}>
             {dayVMs.map((vm) => (

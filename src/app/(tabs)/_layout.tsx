@@ -4,8 +4,8 @@
  * of the scaffold's native tabs. Tab colors come from the PRD theme.
  */
 import { Tabs } from 'expo-router';
-import { View } from 'react-native';
 
+import { DumbbellIcon, HomeIcon } from '@/components/ui/icons';
 import { useTheme } from '@/theme/ThemeProvider';
 
 export default function TabsLayout() {
@@ -22,27 +22,14 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: '홈',
-          // A simple themed dot instead of an emoji glyph (emoji render as tofu in some runtimes).
-          tabBarIcon: ({ color: c, size }) => (
-            <View style={{ width: size * 0.5, height: size * 0.5, borderRadius: size, backgroundColor: c }} />
-          ),
+          tabBarIcon: ({ color: c, size }) => <HomeIcon color={c} size={size} />,
         }}
       />
       <Tabs.Screen
         name="library"
         options={{
           title: '루틴',
-          tabBarIcon: ({ color: c, size }) => (
-            <View
-              style={{
-                width: size * 0.55,
-                height: size * 0.55,
-                borderRadius: 3,
-                borderWidth: 2,
-                borderColor: c,
-              }}
-            />
-          ),
+          tabBarIcon: ({ color: c, size }) => <DumbbellIcon color={c} size={size} />,
         }}
       />
     </Tabs>
