@@ -8,23 +8,14 @@
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { WEEKDAY_LABELS } from '@/constants/labels';
 import { BarRow } from '@/components/insights/BarRow';
 import { TrendBars } from '@/components/insights/TrendBars';
 import { Card } from '@/components/ui/Card';
 import { addDays, weekStartOf } from '@/domain/date';
 import { exerciseRate, weekdayRate, weeklyTrend } from '@/domain/insights';
-import type { AppState, DateKey, Weekday } from '@/types/schema';
+import type { AppState, DateKey } from '@/types/schema';
 import { useTheme } from '@/theme/ThemeProvider';
-
-const WEEKDAY_LABELS: Record<Weekday, string> = {
-  mon: '월',
-  tue: '화',
-  wed: '수',
-  thu: '목',
-  fri: '금',
-  sat: '토',
-  sun: '일',
-};
 
 const RANGE_OPTIONS = [4, 12] as const;
 type RangeWeeks = (typeof RANGE_OPTIONS)[number];

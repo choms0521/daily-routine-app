@@ -11,7 +11,7 @@ import { Pressable, Text, View } from 'react-native';
 import { MonthCalendar } from '@/components/insights/MonthCalendar';
 import { YearHeatmap } from '@/components/insights/YearHeatmap';
 import { Card } from '@/components/ui/Card';
-import { addDays, weekStartOf, weekdayOf } from '@/domain/date';
+import { addDays, weekStartOf } from '@/domain/date';
 import { historyRange, type DayStatusEntry } from '@/domain/insights';
 import type { AppState, DateKey } from '@/types/schema';
 import { useTheme } from '@/theme/ThemeProvider';

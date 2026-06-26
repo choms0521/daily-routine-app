@@ -6,11 +6,11 @@
  */
 import { Text, View } from 'react-native';
 
+import { WEEKDAY_LABELS } from '@/constants/labels';
 import { DayCell } from '@/components/insights/DayCell';
 import type { DayStatusEntry } from '@/domain/insights';
+import { WEEKDAYS } from '@/types/schema';
 import { useTheme } from '@/theme/ThemeProvider';
-
-const WEEKDAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'] as const;
 
 export interface MonthCalendarProps {
   entries: DayStatusEntry[]; // length is a multiple of 7 (full weeks, Mon..Sun)
@@ -37,7 +37,7 @@ export function MonthCalendar({ entries, today, onSelectDay }: MonthCalendarProp
   return (
     <View style={{ gap: space.s2 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        {WEEKDAY_LABELS.map((wd) => (
+        {WEEKDAYS.map((wd) => (
           <Text
             key={wd}
             style={{
@@ -46,7 +46,7 @@ export function MonthCalendar({ entries, today, onSelectDay }: MonthCalendarProp
               color: color.fgMuted,
               fontSize: font.caption.size,
             }}>
-            {wd}
+            {WEEKDAY_LABELS[wd]}
           </Text>
         ))}
       </View>
