@@ -37,7 +37,9 @@ export function StatsSection({ state, today }: StatsSectionProps) {
   const exercises = useMemo(() => exerciseRate(state, fromDate, today), [state, fromDate, today]);
   const trend = useMemo(() => weeklyTrend(state, anchorMonday, weeks), [state, anchorMonday, weeks]);
 
-  const hasData = weekdays.length > 0 || exercises.length > 0;
+  // "Has data" means at least one checked slot in range, not merely an active routine: a routine
+  // with zero 기록 would otherwise render a wall of 0% bars instead of the empty-state guidance.
+  const hasData = weekdays.some((row) => row.done > 0) || exercises.some((row) => row.done > 0);
 
   return (
     <Card style={{ gap: space.s4 }}>

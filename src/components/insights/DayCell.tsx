@@ -44,13 +44,17 @@ function labelColorFor(status: DayStatus, color: Tokens['color']): string {
 
 export function DayCell({ status, label, isToday = false, size = 28, onPress, testID }: DayCellProps) {
   const { color, radius, font } = useTheme();
-  const Container = onPress ? Pressable : View;
+  // A 'none' day is not shown (transparent), so it must never be interactive even when an
+  // onPress is wired — otherwise it becomes an invisible press target that also announces an
+  // accessibility label. Gate both interactivity and the a11y label on status !== 'none'.
+  const interactive = onPress !== undefined && status !== 'none';
+  const Container = interactive ? Pressable : View;
   return (
     <Container
       testID={testID}
-      onPress={onPress}
-      accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={label}
+      onPress={interactive ? onPress : undefined}
+      accessibilityRole={interactive ? 'button' : undefined}
+      accessibilityLabel={status === 'none' ? undefined : label}
       style={{
         width: size,
         height: size,
