@@ -4,14 +4,17 @@
  * file, validates it (domain/backup), and — only after an explicit confirm — replaces the
  * entire state. The decode/validate logic is pure (tested); this screen is the I/O + UX shell.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ReminderCard } from '@/components/settings/ReminderCard';
 import { Card } from '@/components/ui/Card';
 import { todayKey } from '@/domain/clock';
 import type { BackupParseResult } from '@/domain/backup';
 import { exportBackup, pickBackup } from '@/lib/backupFile';
+import { cancelReminders, ensurePermission, scheduleDailyReminder } from '@/lib/notifications';
+import { selectReminder } from '@/store/selectors';
 import { useAppStore } from '@/store/useAppStore';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -33,7 +36,47 @@ export default function SettingsScreen() {
   // Only `replaceState` (a stable action) is subscribed. The full AppState is read lazily at
   // export time via getState() so this tab doesn't re-render on every unrelated state change.
   const replaceState = useAppStore((s) => s.replaceState);
+  const reminder = useAppStore((s) => selectReminder(s.state));
+  const setReminder = useAppStore((s) => s.setReminder);
   const [busy, setBusy] = useState(false);
+
+  // Sync the OS schedule to the reminder config (layer separation: the store holds state, this
+  // effect does the I/O). Enabling asks for permission; if denied, the toggle is reverted and
+  // the user is told — the revert re-runs this effect on the disabled branch (just a cancel), so
+  // there is no permission re-prompt loop. Re-running on mount keeps the schedule consistent
+  // after an app restart (re-schedules if still enabled, clears if not).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        if (!reminder.enabled) {
+          await cancelReminders();
+          return;
+        }
+        const granted = await ensurePermission();
+        if (cancelled) return;
+        if (!granted) {
+          setReminder({ ...reminder, enabled: false });
+          Alert.alert(
+            '알림 권한이 필요합니다',
+            '리마인더를 받으려면 설정에서 이 앱의 알림을 허용해주세요.',
+          );
+          return;
+        }
+        await scheduleDailyReminder(reminder.time);
+      } catch {
+        // The native schedule/cancel I/O failed (OS scheduling error, permission API throw).
+        // Surface it instead of leaving an unhandled promise rejection. Do NOT mutate `reminder`
+        // here: it is an effect dep, so flipping a field would re-run this effect and could loop.
+        // The permission-denied revert above is a separate, intentional path and stays distinct.
+        if (cancelled) return;
+        Alert.alert('리마인더 설정 실패', '알림 예약 중 문제가 발생했어요. 잠시 후 다시 시도해주세요.');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [reminder, setReminder]);
 
   const onExport = async () => {
     setBusy(true);
@@ -92,6 +135,8 @@ export default function SettingsScreen() {
             variant="secondary"
           />
         </Card>
+
+        <ReminderCard reminder={reminder} onChange={setReminder} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -67,8 +67,9 @@ describe('library', () => {
     // Reactivity: a store change to the active pointer re-renders the badge. The async act
     // form flushes the resulting update inside an act boundary (the sync form does not).
     await act(async () => {
+      const prev = useAppStore.getState().state;
       useAppStore.setState({
-        state: { ...useAppStore.getState().state, settings: { activeRoutineId: 'rt_B' } },
+        state: { ...prev, settings: { ...prev.settings, activeRoutineId: 'rt_B' } },
       });
     });
     expect(view.getByTestId('active-badge-rt_B')).toBeTruthy();

@@ -174,7 +174,7 @@ describe('6.5 progress-denominator-excluded set == streak pass-through set', () 
     ],
     activationTimeline: [{ effectiveFrom: '2026-06-24', routineId: 'rt_5', versionId: 'v5_1' }],
     completionLogs: {},
-    settings: { activeRoutineId: 'rt_5' },
+    settings: { activeRoutineId: 'rt_5', reminder: { enabled: false, time: '20:00' } },
   };
 
   function isNeutral(state: AppState, date: string): boolean {

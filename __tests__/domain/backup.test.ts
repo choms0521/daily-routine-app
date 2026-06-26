@@ -6,13 +6,17 @@
 import { backupFilename, parseBackup, serializeBackup } from '@/domain/backup';
 import { baseState, clone } from '../fixtures/baseState';
 
+// parseBackup migrates on import, so round-tripping must start from a current-version (v2)
+// state — baseState is the v1 reference. baseState already carries reminder; only version differs.
+const currentState = { ...baseState, schemaVersion: 2 };
+
 describe('serializeBackup / parseBackup', () => {
   it('round-trips the full AppState including completion logs (T5/T6)', () => {
-    const json = serializeBackup(baseState);
+    const json = serializeBackup(currentState);
     expect(json).toContain('completionLogs');
     const result = parseBackup(json);
     expect(result.success).toBe(true);
-    if (result.success) expect(result.state).toEqual(baseState);
+    if (result.success) expect(result.state).toEqual(currentState);
   });
 
   it('rejects non-JSON input (T7)', () => {
@@ -44,10 +48,10 @@ describe('serializeBackup / parseBackup', () => {
     v0.schemaVersion = 0;
     const result = parseBackup(JSON.stringify(v0));
     expect(result.success).toBe(true);
-    if (result.success) expect(result.state.schemaVersion).toBe(1);
+    if (result.success) expect(result.state.schemaVersion).toBe(2);
   });
 
   it('names the file with date and schemaVersion', () => {
-    expect(backupFilename(baseState, '2026-06-25')).toBe('dailyroutine-backup-2026-06-25-v1.json');
+    expect(backupFilename(currentState, '2026-06-25')).toBe('dailyroutine-backup-2026-06-25-v2.json');
   });
 });

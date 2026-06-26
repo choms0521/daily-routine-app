@@ -14,7 +14,7 @@ import { subjectParticle } from '@/domain/korean';
 import { weekProgress, type WeekProgress } from '@/domain/progress';
 import { streak } from '@/domain/streak';
 import { plan } from '@/domain/timeline';
-import type { AppState, DateKey, DayPlan, Routine, Weekday } from '@/types/schema';
+import type { AppState, DateKey, DayPlan, Reminder, Routine, Weekday } from '@/types/schema';
 
 /** "6.22" style short label for a date key (no zero-padding, matches the PRD concept). */
 function dateLabel(date: DateKey): string {
@@ -221,4 +221,11 @@ export function selectBadges(state: AppState, today: DateKey): BadgeStatus[] {
     .map((badge, index) => ({ badge, index }))
     .sort((a, b) => badgeRank(a.badge) - badgeRank(b.badge) || a.index - b.index)
     .map((entry) => entry.badge);
+}
+
+// --- Settings selectors (B1) ---
+
+/** The current daily reminder config; the settings ReminderCard subscribes to this (spec b1 §2). */
+export function selectReminder(state: AppState): Reminder {
+  return state.settings.reminder;
 }

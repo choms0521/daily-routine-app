@@ -2,7 +2,7 @@
  * Zod schema validation (EC5): the canonical PRD 4.4 JSON parses, and a version with
  * a missing weekday key is rejected (7-weekday completeness is enforced).
  */
-import { AppStateSchema } from '@/types/schema';
+import { AppStateSchema, ReminderSchema } from '@/types/schema';
 import { baseState, clone } from '../fixtures/baseState';
 
 describe('AppStateSchema', () => {
@@ -50,5 +50,20 @@ describe('AppStateSchema', () => {
     broken.completionLogs['6/22/2026'] = log;
     delete broken.completionLogs['2026-06-22'];
     expect(() => AppStateSchema.parse(broken)).toThrow();
+  });
+});
+
+describe('ReminderSchema time', () => {
+  it('accepts valid zero-padded 24h times, including the 00:00 and 23:59 boundaries', () => {
+    for (const time of ['00:00', '23:59', '20:00', '09:05']) {
+      expect(() => ReminderSchema.parse({ enabled: true, time })).not.toThrow();
+    }
+  });
+
+  it('rejects out-of-range or non-zero-padded times', () => {
+    // '99:99' is the regression Copilot flagged: it passed /^\d{2}:\d{2}$/ but is not a real clock.
+    for (const time of ['99:99', '24:00', '23:60', '8:00', '08:0', '0800']) {
+      expect(() => ReminderSchema.parse({ enabled: true, time })).toThrow();
+    }
   });
 });

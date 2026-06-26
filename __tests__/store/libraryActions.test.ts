@@ -98,7 +98,7 @@ describe('deleteRoutine — guards (AC-5.4.3 + past-immutability)', () => {
         { effectiveFrom: '2026-06-01', routineId: 'rt_aXk92', versionId: 'v_001' },
       ],
       completionLogs: {}, // no log references rt_B
-      settings: { activeRoutineId: 'rt_aXk92' },
+      settings: { ...s.settings, activeRoutineId: 'rt_aXk92' },
     };
     const { store } = makeStore(state);
     const result = store.getState().deleteRoutine('rt_B');
@@ -119,7 +119,7 @@ describe('deleteRoutine — guards (AC-5.4.3 + past-immutability)', () => {
       routines: [{ ...clone(routineB), id: 'rt_logged' }],
       activationTimeline: [],
       completionLogs: { '2026-06-10': log },
-      settings: { activeRoutineId: null },
+      settings: { activeRoutineId: null, reminder: { enabled: false, time: '20:00' } },
     };
     const { store } = makeStore(state);
     expect(store.getState().deleteRoutine('rt_logged').ok).toBe(false);
