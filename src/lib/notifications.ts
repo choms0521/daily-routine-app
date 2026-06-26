@@ -15,6 +15,27 @@ import * as Notifications from 'expo-notifications';
 const ANDROID_CHANNEL_ID = 'daily-reminder';
 
 /**
+ * Serialize every schedule/cancel op onto a single queue. expo-notifications calls are async I/O
+ * with no ordering guarantee, so a rapid toggle/time change can interleave two in-flight runs
+ * (each does a cancel + schedule) and leave an older time as the final scheduled reminder.
+ * Chaining each op after the previous one settles makes the last-submitted op the last to run,
+ * so the latest reminder config always wins.
+ */
+let opQueue: Promise<unknown> = Promise.resolve();
+
+function enqueue<T>(op: () => Promise<T>): Promise<T> {
+  // Run `op` once the prior op settles, regardless of whether it resolved or rejected.
+  const run = opQueue.then(op, op);
+  // Keep the queue tail from rejecting so one failed op can't break the ones after it; the
+  // caller still observes this op's own outcome through the returned `run`.
+  opQueue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+/**
  * Ensure the app may post notifications. iOS shows the permission prompt; Android needs a
  * channel before scheduling (and the OS-level POST_NOTIFICATIONS prompt on 13+). Returns
  * whether permission is granted so the caller can keep the toggle off when the user declined.
@@ -38,23 +59,34 @@ export async function ensurePermission(): Promise<boolean> {
  * the local clock matches hour:minute.
  */
 export async function scheduleDailyReminder(time: string): Promise<void> {
-  const [hour, minute] = time.split(':').map(Number);
-  await cancelReminders();
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: '오늘의 운동',
-      body: '오늘 루틴을 아직 체크하지 않았어요. 지금 확인해보세요.',
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute,
-      ...(Platform.OS === 'android' ? { channelId: ANDROID_CHANNEL_ID } : {}),
-    },
+  return enqueue(async () => {
+    const [hour, minute] = time.split(':').map(Number);
+    await cancelRemindersInternal();
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '오늘의 운동',
+        body: '오늘 루틴을 아직 체크하지 않았어요. 지금 확인해보세요.',
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour,
+        minute,
+        ...(Platform.OS === 'android' ? { channelId: ANDROID_CHANNEL_ID } : {}),
+      },
+    });
   });
 }
 
 /** Cancel all scheduled reminders (the app schedules only this one daily reminder). */
 export async function cancelReminders(): Promise<void> {
+  return enqueue(cancelRemindersInternal);
+}
+
+/**
+ * The cancel I/O itself, called directly inside a queued op (scheduleDailyReminder cancels
+ * first) rather than re-entering the queue — re-entering would await the op already running and
+ * deadlock. Only the exported wrappers enqueue.
+ */
+async function cancelRemindersInternal(): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
