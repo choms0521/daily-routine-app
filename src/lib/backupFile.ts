@@ -42,6 +42,10 @@ export async function pickBackup(): Promise<BackupParseResult | null> {
     copyToCacheDirectory: true,
   });
   if (result.canceled) return null;
-  const file = new File(result.assets[0].uri);
+  // Not cancelled but no asset delivered: some document providers can return an empty list.
+  // Treat it as "nothing picked" rather than crashing on result.assets[0].uri.
+  const uri = result.assets[0]?.uri;
+  if (uri === undefined) return null;
+  const file = new File(uri);
   return parseBackup(file.textSync());
 }

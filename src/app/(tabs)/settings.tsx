@@ -30,14 +30,15 @@ function messageFor(reason: ParseFailure): string {
 
 export default function SettingsScreen() {
   const { color, font, space } = useTheme();
-  const state = useAppStore((s) => s.state);
+  // Only `replaceState` (a stable action) is subscribed. The full AppState is read lazily at
+  // export time via getState() so this tab doesn't re-render on every unrelated state change.
   const replaceState = useAppStore((s) => s.replaceState);
   const [busy, setBusy] = useState(false);
 
   const onExport = async () => {
     setBusy(true);
     try {
-      await exportBackup(state, todayKey());
+      await exportBackup(useAppStore.getState().state, todayKey());
     } catch (error) {
       Alert.alert('내보내기 실패', error instanceof Error ? error.message : '백업을 내보내지 못했습니다.');
     } finally {

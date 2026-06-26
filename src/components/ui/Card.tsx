@@ -4,11 +4,11 @@
  * only tokens (surfaceElevated + radius.card + shadow.card); no hardcoded values.
  */
 import type { ReactNode } from 'react';
-import { View, type ViewStyle } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useTheme } from '@/theme/ThemeProvider';
 
-export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const { color, radius, space, shadow } = useTheme();
   return (
     <View
