@@ -3,6 +3,7 @@
  * Verified against the canonical PRD 4.4 fixture (week of Mon 2026-06-22, total = 8).
  */
 import {
+  buildWeekReviewSummary,
   isCurrentWeek,
   selectActiveRoutineId,
   selectActiveRoutineName,
@@ -13,7 +14,9 @@ import {
   selectStreak,
   selectWeekLabel,
   selectWeekProgress,
+  selectWeekReview,
 } from '@/store/selectors';
+import type { WeekReview } from '@/domain/insights';
 import type { AppState } from '@/types/schema';
 import { baseState, clone } from '../fixtures/baseState';
 
@@ -107,5 +110,65 @@ describe('selectPendingActivation', () => {
       routineName: '여름 컨디셔닝',
       effectiveFrom: '2026-06-24',
     });
+  });
+});
+
+// B3 — the natural-language summary formatter (spec b3 §5: 빈 주 안내, 델타 부호). Tested via
+// hand-built WeekReview literals so each copy branch runs directly, independent of any fixture.
+describe('buildWeekReviewSummary', () => {
+  function review(partial: Partial<WeekReview>): WeekReview {
+    return {
+      weekStart: '2026-06-22',
+      progress: { done: 0, total: 8, pct: 0 },
+      completedDays: 0,
+      activeDays: 6,
+      topWeekday: 'mon',
+      missedWeekday: 'tue',
+      deltaPct: 0,
+      ...partial,
+    };
+  }
+
+  it('attaches 이/가 via subjectParticle on the real weekday noun (월요일 -> 월요일이)', () => {
+    const s = buildWeekReviewSummary(review({ completedDays: 3, topWeekday: 'mon', deltaPct: 13 }));
+    expect(s).toBe('이번 주 3일 완료했습니다, 월요일이 가장 잘 지킨 요일입니다, 지난주보다 13%p 높습니다.');
+  });
+
+  it('reports a negative delta with 낮습니다 and an absolute value', () => {
+    const s = buildWeekReviewSummary(review({ completedDays: 2, deltaPct: -5 }));
+    expect(s).toContain('지난주보다 5%p 낮습니다');
+  });
+
+  it('reports a flat delta with 같습니다', () => {
+    const s = buildWeekReviewSummary(review({ deltaPct: 0 }));
+    expect(s).toContain('지난주와 같습니다');
+  });
+
+  it('drops the prior-week clause when deltaPct is null', () => {
+    const s = buildWeekReviewSummary(review({ deltaPct: null }));
+    expect(s).not.toContain('지난주');
+    expect(s.endsWith('가장 잘 지킨 요일입니다.')).toBe(true);
+  });
+
+  it('shows empty-week guidance when there is no active day', () => {
+    const s = buildWeekReviewSummary(review({ activeDays: 0, topWeekday: null, missedWeekday: null, deltaPct: null }));
+    expect(s).toBe('이번 주 기록이 아직 없습니다. 운동을 체크하면 요약이 쌓입니다.');
+  });
+});
+
+describe('selectWeekReview', () => {
+  it('returns the review plus a non-empty summary for the baseState week', () => {
+    const vm = selectWeekReview(baseState, MON, MON);
+    expect(vm.review.progress).toEqual({ done: 1, total: 8, pct: 13 });
+    expect(vm.summary.length).toBeGreaterThan(0);
+  });
+
+  it('produces the empty-week summary end-to-end for a fully inactive state', () => {
+    const inactive = clone(baseState);
+    inactive.completionLogs = {};
+    inactive.activationTimeline = [];
+    const vm = selectWeekReview(inactive, MON, MON);
+    expect(vm.review.activeDays).toBe(0);
+    expect(vm.summary).toBe('이번 주 기록이 아직 없습니다. 운동을 체크하면 요약이 쌓입니다.');
   });
 });

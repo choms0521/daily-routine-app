@@ -5,7 +5,7 @@
  * tab glyphs.
  */
 import type { ColorValue } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 // ColorValue (not string) so the expo-router tab bar's active/inactive tint flows straight
 // through, and react-native-svg's fill/stroke (both ColorValue) accept it without a cast.
@@ -51,6 +51,40 @@ export function FlameIcon({ color, size = 24 }: IconProps) {
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
         d="M12 3c.6 3-1.8 4.2-3 6-1 1.5-1.5 3-1.5 4.3A4.5 4.5 0 0 0 12 18a4.5 4.5 0 0 0 4.5-4.7c0-1-.3-1.9-.8-2.6-.4.7-1 1.1-1.7 1.1.9-2.4-.2-5.4-2-8.8Z"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
+export function CalendarIcon({ color, size = 24 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x={3.5} y={5} width={17} height={15.5} rx={2.5} stroke={color} strokeWidth={2} />
+      <Path
+        d="M3.5 9.5h17M8 3v3.5M16 3v3.5"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function MedalIcon({ color, size = 24 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M8.5 3 12 9.5 15.5 3"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Circle cx={12} cy={15} r={5.5} stroke={color} strokeWidth={2} />
+      <Path
+        d="M12 12.5l.9 1.8 2 .3-1.45 1.4.35 2L12 17.05 10.2 18l.35-2L9.1 14.6l2-.3.9-1.8Z"
         fill={color}
       />
     </Svg>
