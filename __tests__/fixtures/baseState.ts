@@ -58,7 +58,10 @@ export const baseState: AppState = {
       },
     },
   },
-  settings: { activeRoutineId: 'rt_aXk92' },
+  // reminder is a schemaVersion-2 field; included so this AppState-typed literal compiles. The
+  // schemaVersion stays 1 (this fixture is the v1 reference data), so migration tests exercise
+  // the v1 -> v2 step; injection vs. preservation is split in migration.test.ts.
+  settings: { activeRoutineId: 'rt_aXk92', reminder: { enabled: false, time: '20:00' } },
 };
 
 /** Deep clone via JSON round-trip (fixture has no functions/dates). */

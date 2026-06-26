@@ -9,6 +9,7 @@
  * across routines by design). We assert the binding constraints from the higher source instead.
  */
 import { serializeRoutine, deserializeRoutine, type SharePayload } from '@/domain/share';
+import { CURRENT_SCHEMA_VERSION } from '@/domain/migration';
 import { draftFromRoutine, setName, toggleRestDay } from '@/domain/routineDraft';
 import type { RoutineVersion } from '@/types/schema';
 import { baseState, clone } from '../fixtures/baseState';
@@ -37,7 +38,8 @@ const sourceVersion: RoutineVersion = {
 };
 
 function payloadFrom(version: RoutineVersion, name: string): SharePayload {
-  const result = deserializeRoutine(serializeRoutine(version, name), 1);
+  // serializeRoutine stamps CURRENT_SCHEMA_VERSION, so decode with the same supported version.
+  const result = deserializeRoutine(serializeRoutine(version, name), CURRENT_SCHEMA_VERSION);
   if (!result.success) throw new Error('test payload failed to decode');
   return result.payload;
 }

@@ -23,7 +23,12 @@ const NEXT_MON = '2026-06-29';
 /** baseState with nothing active yet (empty timeline, no active pointer, no logs). */
 function preActivationState(): AppState {
   const s = clone(baseState);
-  return { ...s, activationTimeline: [], completionLogs: {}, settings: { activeRoutineId: null } };
+  return {
+    ...s,
+    activationTimeline: [],
+    completionLogs: {},
+    settings: { ...s.settings, activeRoutineId: null },
+  };
 }
 
 describe('setActiveRoutine — AC-5.4.1 exactly one active', () => {

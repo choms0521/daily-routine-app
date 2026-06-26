@@ -13,6 +13,10 @@ import { baseState, clone } from '../fixtures/baseState';
 const STORAGE_KEY = 'workout-tracker:appstate';
 const BACKUP_KEY = 'workout-tracker:appstate.backup.preMigration';
 
+// baseState is the v1 reference data; a current-version (v2) state for the "already current"
+// paths. baseState already carries reminder, so only the version differs.
+const currentState = { ...baseState, schemaVersion: 2 };
+
 describe('AsyncStorageRepository', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
@@ -24,16 +28,16 @@ describe('AsyncStorageRepository', () => {
 
   it('round-trips save then load', async () => {
     const repo = new AsyncStorageRepository();
-    await repo.save(baseState);
-    expect(await repo.load()).toEqual(baseState);
+    await repo.save(currentState);
+    expect(await repo.load()).toEqual(currentState);
   });
 
-  it('migrates a v0 payload to v1 on load', async () => {
+  it('migrates a v0 payload through to the current version on load', async () => {
     const v0 = clone(baseState) as Record<string, unknown>;
     v0.schemaVersion = 0;
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(v0));
     const loaded = await new AsyncStorageRepository().load();
-    expect(loaded?.schemaVersion).toBe(1);
+    expect(loaded?.schemaVersion).toBe(2);
   });
 
   it('rejects a future schemaVersion on load', async () => {
@@ -60,7 +64,7 @@ describe('AsyncStorageRepository', () => {
 
   it('clears a stale pre-migration backup when loading current-version state', async () => {
     await AsyncStorage.setItem(BACKUP_KEY, '{"old":"backup"}');
-    await new AsyncStorageRepository().save(baseState);
+    await new AsyncStorageRepository().save(currentState);
     await new AsyncStorageRepository().load();
     expect(await AsyncStorage.getItem(BACKUP_KEY)).toBeNull();
   });
@@ -78,7 +82,7 @@ describe('AsyncStorageRepository', () => {
     try {
       const loaded = await new AsyncStorageRepository().load();
       // The backup failure must not hide the user's data behind an empty state.
-      expect(loaded?.schemaVersion).toBe(1);
+      expect(loaded?.schemaVersion).toBe(2);
     } finally {
       spy.mockRestore();
     }

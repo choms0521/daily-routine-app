@@ -21,6 +21,7 @@ import {
   serializeRoutine,
   type SharePayload,
 } from '@/domain/share';
+import { CURRENT_SCHEMA_VERSION } from '@/domain/migration';
 import { WEEKDAYS } from '@/types/schema';
 import type { RoutineVersion } from '@/types/schema';
 import { baseState } from '../fixtures/baseState';
@@ -52,7 +53,8 @@ function expectedTemplate() {
 
 /** A canonical valid payload object, obtained through the real encode/decode path. */
 function validPayload(): SharePayload {
-  const result = deserializeRoutine(serializeRoutine(version, routineName), 1);
+  // serializeRoutine stamps CURRENT_SCHEMA_VERSION, so decode with the same supported version.
+  const result = deserializeRoutine(serializeRoutine(version, routineName), CURRENT_SCHEMA_VERSION);
   if (!result.success) throw new Error('fixture payload failed to decode');
   return result.payload;
 }
@@ -76,11 +78,11 @@ function rawInflateToString(encoded: string): string {
 describe('share roundtrip', () => {
   it('serialize -> deserialize preserves the routine template', () => {
     const encoded = serializeRoutine(version, routineName);
-    const result = deserializeRoutine(encoded, 1);
+    const result = deserializeRoutine(encoded, CURRENT_SCHEMA_VERSION);
 
     expect(result.success).toBe(true);
     if (!result.success) return;
-    expect(result.payload.schemaVersion).toBe(1);
+    expect(result.payload.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(result.payload.type).toBe('routine-share');
     expect(result.payload.routine).toEqual(expectedTemplate());
   });
@@ -100,7 +102,7 @@ describe('share roundtrip', () => {
         sun: { aerobic: [], anaerobic: [] },
       },
     };
-    const result = deserializeRoutine(serializeRoutine(v, '여름 🌞 루틴'), 1);
+    const result = deserializeRoutine(serializeRoutine(v, '여름 🌞 루틴'), CURRENT_SCHEMA_VERSION);
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.payload.routine.name).toBe('여름 🌞 루틴');
@@ -152,21 +154,24 @@ describe('share payload carries the template only (AC-5.5.1)', () => {
 describe('schemaVersion gating (AC-5.5.3)', () => {
   it('rejects a payload newer than the app supports', () => {
     const encoded = encodePayload({ ...validPayload(), schemaVersion: 999 });
-    expect(deserializeRoutine(encoded, 1)).toEqual({
+    expect(deserializeRoutine(encoded, CURRENT_SCHEMA_VERSION)).toEqual({
       success: false,
       reason: 'incompatible-schema',
     });
   });
 
   it('accepts a payload at the supported version', () => {
-    expect(deserializeRoutine(serializeRoutine(version, routineName), 1).success).toBe(true);
+    expect(
+      deserializeRoutine(serializeRoutine(version, routineName), CURRENT_SCHEMA_VERSION).success,
+    ).toBe(true);
   });
 
   it('migrates an older-version payload through migrateSharePayload (v1 pass-through)', () => {
-    // Pretend the app supports schemaVersion 2: a v1 payload is below it, so the < branch runs
+    // An explicit v1 payload is below the supported (current) version, so the < branch runs
     // migrateSharePayload (a no-op in v1) and the payload still validates. Wires the path future
     // share-payload migrations will fill.
-    const result = deserializeRoutine(serializeRoutine(version, routineName), 2);
+    const encoded = encodePayload({ ...validPayload(), schemaVersion: 1 });
+    const result = deserializeRoutine(encoded, CURRENT_SCHEMA_VERSION);
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.payload.routine.name).toBe(routineName);
@@ -185,7 +190,7 @@ describe('weekday completeness (sharedDaysSchema)', () => {
         version: { ...payload.routine.version, days: daysWithoutMon },
       },
     };
-    expect(deserializeRoutine(encodePayload(broken), 1)).toEqual({
+    expect(deserializeRoutine(encodePayload(broken), CURRENT_SCHEMA_VERSION)).toEqual({
       success: false,
       reason: 'zod-validation',
     });
@@ -209,7 +214,7 @@ describe('name/sets trimming at the trust boundary', () => {
         },
       },
     };
-    const result = deserializeRoutine(encodePayload(padded), 1);
+    const result = deserializeRoutine(encodePayload(padded), CURRENT_SCHEMA_VERSION);
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.payload.routine.name).toBe('여름 컨디셔닝');
@@ -220,7 +225,7 @@ describe('name/sets trimming at the trust boundary', () => {
   it('rejects a whitespace-only routine name (empty after trim -> zod-validation)', () => {
     const payload = validPayload();
     const blank = { ...payload, routine: { ...payload.routine, name: '   ' } };
-    expect(deserializeRoutine(encodePayload(blank), 1)).toEqual({
+    expect(deserializeRoutine(encodePayload(blank), CURRENT_SCHEMA_VERSION)).toEqual({
       success: false,
       reason: 'zod-validation',
     });
@@ -241,7 +246,7 @@ describe('name/sets trimming at the trust boundary', () => {
         },
       },
     };
-    expect(deserializeRoutine(encodePayload(blank), 1)).toEqual({
+    expect(deserializeRoutine(encodePayload(blank), CURRENT_SCHEMA_VERSION)).toEqual({
       success: false,
       reason: 'zod-validation',
     });
@@ -325,7 +330,7 @@ describe('delivery forms (PRD 7.1)', () => {
 
   it('deep link roundtrips through extractEncoded -> deserializeRoutine', () => {
     const link = buildDeepLink(serializeRoutine(version, routineName));
-    const result = deserializeRoutine(link, 1);
+    const result = deserializeRoutine(link, CURRENT_SCHEMA_VERSION);
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.payload.routine.name).toBe(routineName);

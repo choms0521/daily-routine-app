@@ -1,16 +1,19 @@
 /**
- * Schema migration (PRD 8.4), skeleton. Current schemaVersion is 1, so there is no
- * real transform yet; this defines the sequential apply mechanism and the
- * pre-migration backup point that future versions plug into.
+ * Schema migration (PRD 8.4). Current schemaVersion is 2; the only real transform is the
+ * v1 -> v2 step that seeds Settings.reminder (B1). This module defines the sequential apply
+ * mechanism and the pre-migration backup point that future versions plug into.
  *
  * Migration ownership (single definition, spec stage-1 §3.6):
  *   - migrate(raw -> AppState): evolves a stored AppState's schemaVersion.
  *   - migrateSharePayload(payload, targetVersion): share payload version transform.
  */
 import { AppStateSchema } from '@/types/schema';
-import type { AppState } from '@/types/schema';
+import type { AppState, Reminder, Settings } from '@/types/schema';
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
+
+/** Default daily reminder for states predating schemaVersion 2 and fresh installs (spec b1 §1). */
+export const DEFAULT_REMINDER: Reminder = { enabled: false, time: '20:00' };
 
 /** Raised when a payload's schemaVersion is newer than this app supports (PRD 7.2). */
 export class IncompatibleVersionError extends Error {
@@ -28,9 +31,20 @@ type MigrationStep = (raw: unknown) => unknown;
  * migrations[n] = schemaVersion n -> n+1; the key is the "from" version. The v0 -> v1
  * step (just raising schemaVersion) closes the runtime hole where migrations[s] would
  * be undefined. A stage-5 fixture test (state-v0.json) depends on this entry.
+ *
+ * v1 -> v2 (B1): seed Settings.reminder with DEFAULT_REMINDER, preserving every existing
+ * settings field (e.g. activeRoutineId). Additive change — no computation semantics shift.
  */
 export const migrations: Record<number, MigrationStep> = {
   0: (s) => ({ ...(s as object), schemaVersion: 1 }),
+  1: (s) => {
+    const state = s as { settings?: Partial<Settings> };
+    return {
+      ...(s as object),
+      schemaVersion: 2,
+      settings: { ...state.settings, reminder: { ...DEFAULT_REMINDER } },
+    };
+  },
 };
 
 /** Read a raw payload's schemaVersion, defaulting to 0 when absent/non-numeric. */
