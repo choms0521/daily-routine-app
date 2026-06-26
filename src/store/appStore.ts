@@ -127,6 +127,13 @@ export interface AppStore {
    * (AC-5.5.2). Returns the new routine id.
    */
   importRoutine: (payload: SharePayload) => string;
+
+  // --- Stage 5 backup/restore (PRD 8.5) ---
+  /**
+   * Replace the entire AppState (PRD 8.5 restore). A destructive whole-state swap; the caller
+   * must gate it behind a user confirmation. Persists optimistically like any other write.
+   */
+  replaceState: (next: AppState) => void;
 }
 
 const EMPTY_CHECKS: DayLog['checks'] = { aerobic: {}, anaerobic: {} };
@@ -368,6 +375,8 @@ export function createAppStore(
         persist({ ...state, routines: [...state.routines, routine] });
         return routineId;
       },
+
+      replaceState: (next) => persist(next),
     };
   });
 }

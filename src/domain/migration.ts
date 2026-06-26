@@ -70,11 +70,3 @@ export function migrate(raw: unknown): AppState {
 export function migrateSharePayload(payload: unknown, _targetVersion: number): unknown {
   return payload;
 }
-
-/**
- * Pre-migration backup point (PRD 8.4). Stage 1 skeleton: the call site exists in the
- * repository load() flow; real backup persistence is wired in Stage 5.
- */
-export async function backupBeforeMigrate(raw: unknown): Promise<void> {
-  void raw;
-}

@@ -8,6 +8,9 @@ import {
   migrate,
   migrateSharePayload,
 } from '@/domain/migration';
+import { weekStartOf } from '@/domain/date';
+import { weekProgress } from '@/domain/progress';
+import { streak } from '@/domain/streak';
 import { baseState, clone } from '../fixtures/baseState';
 
 describe('migrate', () => {
@@ -21,6 +24,22 @@ describe('migrate', () => {
     const v0 = clone(baseState) as Record<string, unknown>;
     v0.schemaVersion = 0;
     expect(migrate(v0).schemaVersion).toBe(1);
+  });
+
+  it('preserves past streak and weekProgress across the v0 -> v1 migration (T2)', () => {
+    // baseState is the v0 data (neither fn reads schemaVersion), so before == data-at-v0.
+    const today = '2026-06-22';
+    const weekStart = weekStartOf(today);
+    const beforeStreak = streak(baseState, today);
+    const beforeProgress = weekProgress(baseState, weekStart);
+
+    const v0 = clone(baseState) as Record<string, unknown>;
+    v0.schemaVersion = 0;
+    const migrated = migrate(v0);
+
+    // The v0 -> v1 step only bumps schemaVersion; historical values must be unchanged (diff 0).
+    expect(streak(migrated, today)).toBe(beforeStreak);
+    expect(weekProgress(migrated, weekStart)).toEqual(beforeProgress);
   });
 
   it('throws IncompatibleVersionError for a future schemaVersion', () => {

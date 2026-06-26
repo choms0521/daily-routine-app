@@ -7,6 +7,7 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useAppStore } from '@/store/useAppStore';
@@ -29,16 +30,18 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="editor/[routineId]" options={{ presentation: 'card' }} />
-          {/* Deep-link target: workouttracker://import?d=... routes here (expo-router linking). */}
-          <Stack.Screen name="import" options={{ presentation: 'card' }} />
-        </Stack>
-        <StatusBar style="dark" />
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="editor/[routineId]" options={{ presentation: 'card' }} />
+            {/* Deep-link target: workouttracker://import?d=... routes here (expo-router linking). */}
+            <Stack.Screen name="import" options={{ presentation: 'card' }} />
+          </Stack>
+          <StatusBar style="dark" />
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

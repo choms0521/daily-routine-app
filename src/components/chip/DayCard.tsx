@@ -26,17 +26,18 @@ export function DayCard({
   isRestDay,
   children,
 }: DayCardProps) {
-  const { color, font, space, radius } = useTheme();
+  const { color, font, space, radius, shadow } = useTheme();
   const highlight = isToday && isCurrentWeek;
   return (
     <View
       style={{
-        backgroundColor: color.surface,
+        backgroundColor: color.surfaceElevated,
         borderRadius: radius.card,
-        borderWidth: highlight ? 2 : 1,
-        borderColor: highlight ? color.primary : color.border,
+        borderWidth: highlight ? 2 : 0,
+        borderColor: color.primary,
         padding: space.s4,
         gap: space.s3,
+        ...shadow.card,
       }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s2 }}>
         <Text style={{ color: color.fg, fontSize: font.subtitle.size, fontWeight: font.subtitle.weight }}>
