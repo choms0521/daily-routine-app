@@ -392,7 +392,9 @@ export function createAppStore(
 
       setReminder: (next) => {
         const { state } = get();
-        persist({ ...state, settings: { ...state.settings, reminder: next } });
+        // Copy the incoming reminder so a later external mutation of the caller's object can't
+        // reach into store state (project immutability rule; Reminder is flat, shallow copy suffices).
+        persist({ ...state, settings: { ...state.settings, reminder: { ...next } } });
       },
     };
   });

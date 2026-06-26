@@ -48,21 +48,30 @@ export default function SettingsScreen() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      if (!reminder.enabled) {
-        await cancelReminders();
-        return;
+      try {
+        if (!reminder.enabled) {
+          await cancelReminders();
+          return;
+        }
+        const granted = await ensurePermission();
+        if (cancelled) return;
+        if (!granted) {
+          setReminder({ ...reminder, enabled: false });
+          Alert.alert(
+            '알림 권한이 필요합니다',
+            '리마인더를 받으려면 설정에서 이 앱의 알림을 허용해주세요.',
+          );
+          return;
+        }
+        await scheduleDailyReminder(reminder.time);
+      } catch {
+        // The native schedule/cancel I/O failed (OS scheduling error, permission API throw).
+        // Surface it instead of leaving an unhandled promise rejection. Do NOT mutate `reminder`
+        // here: it is an effect dep, so flipping a field would re-run this effect and could loop.
+        // The permission-denied revert above is a separate, intentional path and stays distinct.
+        if (cancelled) return;
+        Alert.alert('리마인더 설정 실패', '알림 예약 중 문제가 발생했어요. 잠시 후 다시 시도해주세요.');
       }
-      const granted = await ensurePermission();
-      if (cancelled) return;
-      if (!granted) {
-        setReminder({ ...reminder, enabled: false });
-        Alert.alert(
-          '알림 권한이 필요합니다',
-          '리마인더를 받으려면 설정에서 이 앱의 알림을 허용해주세요.',
-        );
-        return;
-      }
-      await scheduleDailyReminder(reminder.time);
     })();
     return () => {
       cancelled = true;

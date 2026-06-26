@@ -105,7 +105,7 @@ function TimeStepper({ testID, label, value, onIncrement, onDecrement }: TimeSte
   return (
     <View style={{ alignItems: 'center', gap: space.s2 }}>
       <Text style={{ color: color.fgMuted, fontSize: font.caption.size }}>{label}</Text>
-      <StepButton testID={`${testID}-up`} label="＋" onPress={onIncrement} />
+      <StepButton testID={`${testID}-up`} label="＋" accessibilityLabel={`${label} 늘리기`} onPress={onIncrement} />
       <Text
         style={{
           color: color.fg,
@@ -117,18 +117,29 @@ function TimeStepper({ testID, label, value, onIncrement, onDecrement }: TimeSte
         }}>
         {value}
       </Text>
-      <StepButton testID={`${testID}-down`} label="－" onPress={onDecrement} />
+      <StepButton testID={`${testID}-down`} label="－" accessibilityLabel={`${label} 줄이기`} onPress={onDecrement} />
     </View>
   );
 }
 
-function StepButton({ testID, label, onPress }: { testID: string; label: string; onPress: () => void }) {
+function StepButton({
+  testID,
+  label,
+  accessibilityLabel,
+  onPress,
+}: {
+  testID: string;
+  label: string;
+  accessibilityLabel: string;
+  onPress: () => void;
+}) {
   const { color, font, space, radius } = useTheme();
   return (
     <Pressable
       testID={testID}
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => ({
         backgroundColor: pressed ? color.primaryWeak : color.chipIdleBg,
         paddingVertical: space.s2,
