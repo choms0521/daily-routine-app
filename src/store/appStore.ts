@@ -19,7 +19,7 @@
 import { create } from 'zustand';
 import type { StoreApi, UseBoundStore } from 'zustand';
 import { addDays, weekDays } from '@/domain/date';
-import { CURRENT_SCHEMA_VERSION } from '@/domain/migration';
+import { CURRENT_SCHEMA_VERSION, DEFAULT_REMINDER } from '@/domain/migration';
 import {
   buildRoutine,
   buildVersion,
@@ -30,16 +30,21 @@ import { draftFromRoutine, type RoutineDraft } from '@/domain/routineDraft';
 import { draftFromSharePayload, type SharePayload } from '@/domain/share';
 import { activationOf, plan, versionOf } from '@/domain/timeline';
 import type { StorageRepository } from '@/repository/StorageRepository';
-import type { AppState, Category, DateKey, DayLog, Routine } from '@/types/schema';
+import type { AppState, Category, DateKey, DayLog, Reminder, Routine } from '@/types/schema';
 
-/** Fresh-install state: a valid, empty AppState at the current schema version. */
+/**
+ * Fresh-install state: a valid, empty AppState at the current schema version. A fresh install
+ * already starts at schemaVersion 2, so it never runs migrations[1]; the reminder default must
+ * be seeded here too, or settings.reminder is undefined and selectReminder/ReminderCard break
+ * (spec b1 §1 "seed both entry points").
+ */
 export function emptyAppState(): AppState {
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     routines: [],
     activationTimeline: [],
     completionLogs: {},
-    settings: { activeRoutineId: null },
+    settings: { activeRoutineId: null, reminder: { ...DEFAULT_REMINDER } },
   };
 }
 
@@ -134,6 +139,13 @@ export interface AppStore {
    * must gate it behind a user confirmation. Persists optimistically like any other write.
    */
   replaceState: (next: AppState) => void;
+
+  // --- B1 local reminder (spec b1 §2) ---
+  /**
+   * Update settings.reminder immutably, then persist. State only — the schedule/cancel I/O
+   * (lib/notifications.ts) runs in the settings screen effect, not here (layer separation).
+   */
+  setReminder: (next: Reminder) => void;
 }
 
 const EMPTY_CHECKS: DayLog['checks'] = { aerobic: {}, anaerobic: {} };
@@ -377,6 +389,13 @@ export function createAppStore(
       },
 
       replaceState: (next) => persist(next),
+
+      setReminder: (next) => {
+        const { state } = get();
+        // Copy the incoming reminder so a later external mutation of the caller's object can't
+        // reach into store state (project immutability rule; Reminder is flat, shallow copy suffices).
+        persist({ ...state, settings: { ...state.settings, reminder: { ...next } } });
+      },
     };
   });
 }

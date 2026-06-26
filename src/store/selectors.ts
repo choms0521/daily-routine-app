@@ -11,7 +11,7 @@ import { categoryDone, isRestDay } from '@/domain/completion';
 import { weekProgress, type WeekProgress } from '@/domain/progress';
 import { streak } from '@/domain/streak';
 import { plan } from '@/domain/timeline';
-import type { AppState, DateKey, DayPlan, Routine, Weekday } from '@/types/schema';
+import type { AppState, DateKey, DayPlan, Reminder, Routine, Weekday } from '@/types/schema';
 
 /** "6.22" style short label for a date key (no zero-padding, matches the PRD concept). */
 function dateLabel(date: DateKey): string {
@@ -139,4 +139,11 @@ export function selectDayViewModels(
       checks: log ? log.checks : { aerobic: {}, anaerobic: {} },
     };
   });
+}
+
+// --- Settings selectors (B1) ---
+
+/** The current daily reminder config; the settings ReminderCard subscribes to this (spec b1 §2). */
+export function selectReminder(state: AppState): Reminder {
+  return state.settings.reminder;
 }

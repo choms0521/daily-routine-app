@@ -102,9 +102,22 @@ export const DayLogSchema = z.object({
 });
 export type DayLog = z.infer<typeof DayLogSchema>;
 
+/**
+ * Daily local reminder config (B1, spec b1 §1). `time` is an 'HH:MM' local clock string
+ * (zero-padded, 24h). Validated at the boundary so the I/O shell can split it into the
+ * hour/minute components a daily notification trigger needs without re-checking format.
+ */
+export const ReminderSchema = z.object({
+  enabled: z.boolean(),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Expected an 'HH:MM' 24h time (00:00-23:59)"),
+});
+export type Reminder = z.infer<typeof ReminderSchema>;
+
 export const SettingsSchema = z.object({
   // Selected active routine; on switch day this can differ from today's resolved plan (PRD 5.4).
   activeRoutineId: z.string().nullable(),
+  // Local reminder; added in schemaVersion 2 (migrations[1] seeds the default for old states).
+  reminder: ReminderSchema,
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 

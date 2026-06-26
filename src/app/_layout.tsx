@@ -7,11 +7,23 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Notifications from 'expo-notifications';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useAppStore } from '@/store/useAppStore';
 import { ThemeProvider } from '@/theme/ThemeProvider';
+
+// Foreground display behaviour for the B1 daily reminder. Set once at module load so a reminder
+// that fires while the app is open still surfaces a banner (local-only; no remote push).
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function RootLayout() {
   // Load persisted state on app start. Stage 3 ships the routine editor, so a fresh install
