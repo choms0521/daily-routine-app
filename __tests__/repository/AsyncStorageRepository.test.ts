@@ -64,4 +64,23 @@ describe('AsyncStorageRepository', () => {
     await new AsyncStorageRepository().load();
     expect(await AsyncStorage.getItem(BACKUP_KEY)).toBeNull();
   });
+
+  it('still loads and migrates when the best-effort backup write fails', async () => {
+    const v0 = clone(baseState) as Record<string, unknown>;
+    v0.schemaVersion = 0;
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(v0));
+    // Simulate a transient storage failure on the backup write only; STORAGE_KEY is intact.
+    const spy = jest
+      .spyOn(AsyncStorage, 'setItem')
+      .mockImplementation((key) =>
+        key === BACKUP_KEY ? Promise.reject(new Error('transient storage failure')) : Promise.resolve(),
+      );
+    try {
+      const loaded = await new AsyncStorageRepository().load();
+      // The backup failure must not hide the user's data behind an empty state.
+      expect(loaded?.schemaVersion).toBe(1);
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });

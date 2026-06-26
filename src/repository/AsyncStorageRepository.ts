@@ -30,10 +30,17 @@ export class AsyncStorageRepository implements StorageRepository {
     // point. Once we're already on the current version, clear any stale backup from a past
     // upgrade (load() never writes the migrated result, so migrate() throwing leaves the
     // original STORAGE_KEY value intact — no rollback machinery needed).
-    if (schemaVersionOf(parsed) < CURRENT_SCHEMA_VERSION) {
-      await AsyncStorage.setItem(BACKUP_KEY, raw);
-    } else {
-      await AsyncStorage.removeItem(BACKUP_KEY);
+    //
+    // Best-effort: a transient storage failure writing/clearing the backup must not reject
+    // load() and hide the user's still-intact STORAGE_KEY data behind an empty hydrate state.
+    try {
+      if (schemaVersionOf(parsed) < CURRENT_SCHEMA_VERSION) {
+        await AsyncStorage.setItem(BACKUP_KEY, raw);
+      } else {
+        await AsyncStorage.removeItem(BACKUP_KEY);
+      }
+    } catch {
+      // The backup is a safety net, not on the critical load/migration path — proceed.
     }
     return migrate(parsed);
   }
