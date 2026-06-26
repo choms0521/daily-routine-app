@@ -47,5 +47,6 @@ export async function pickBackup(): Promise<BackupParseResult | null> {
   const uri = result.assets[0]?.uri;
   if (uri === undefined) return null;
   const file = new File(uri);
-  return parseBackup(file.textSync());
+  // Async read (not textSync): a large backup would block the JS thread and jank the UI on import.
+  return parseBackup(await file.text());
 }
