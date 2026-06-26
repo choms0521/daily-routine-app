@@ -5,7 +5,7 @@
  * protects the shared contract that C2/B3 depend on.
  */
 import { dayStatus, exerciseRate, historyRange, weekReview, weekdayRate, weeklyTrend } from '@/domain/insights';
-import { baseState, clone, withLogs } from '../fixtures/baseState';
+import { baseState, clone, withActivations, withLogs } from '../fixtures/baseState';
 import type { DayLog, Weekday } from '@/types/schema';
 
 function log(date: string, aerobic: Record<string, boolean>, anaerobic: Record<string, boolean>): DayLog {
@@ -215,5 +215,44 @@ describe('weekReview', () => {
     expect(review.missedWeekday).toBeNull();
     expect(review.progress).toEqual({ done: 0, total: 0, pct: 0 });
     expect(review.deltaPct).toBeNull(); // prior week also inactive
+  });
+
+  it('returns deltaPct null when the current week is empty even though the prior week is active', () => {
+    // Switch to an all-rest routine from Mon 06-29 on: the reviewed week (06-29..07-05) has a zero
+    // denominator while the prior week (06-22..06-28) is still the active v_001. deltaPct must be
+    // null, never `0 - priorPct`, so an empty current week never reads as a drop to 0% (Copilot #1).
+    const state = clone(baseState);
+    state.routines.push({
+      id: 'rt_rest',
+      name: '회복 주간',
+      createdAt: '2026-06-29T08:00:00Z',
+      versions: [
+        {
+          versionId: 'v_rest',
+          createdAt: '2026-06-29T08:00:00Z',
+          restDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+          days: {
+            mon: { aerobic: [], anaerobic: [] },
+            tue: { aerobic: [], anaerobic: [] },
+            wed: { aerobic: [], anaerobic: [] },
+            thu: { aerobic: [], anaerobic: [] },
+            fri: { aerobic: [], anaerobic: [] },
+            sat: { aerobic: [], anaerobic: [] },
+            sun: { aerobic: [], anaerobic: [] },
+          },
+        },
+      ],
+    });
+    const switched = withActivations(state, {
+      effectiveFrom: '2026-06-29',
+      routineId: 'rt_rest',
+      versionId: 'v_rest',
+    });
+
+    const review = weekReview(switched, '2026-06-29', '2026-06-29');
+    expect(review.activeDays).toBe(0); // every day of the reviewed week is rest
+    expect(review.progress.total).toBe(0); // empty current week
+    expect(weekReview(switched, '2026-06-22', '2026-06-22').progress.total).toBeGreaterThan(0); // prior active
+    expect(review.deltaPct).toBeNull(); // current empty -> no misleading delta
   });
 });

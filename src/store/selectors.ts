@@ -213,8 +213,12 @@ function badgeRank(badge: BadgeStatus): number {
 /**
  * Thin A3 selector (spec a3 §2): derives the badge statuses via earnedBadges and sorts them for
  * display — earned → in-progress → unearned (dev doc §Day2). BadgeGrid only displays the result.
- * The sort is stable on rank, so catalog order is preserved within each rank group.
+ * An explicit original-index tie-breaker preserves catalog order within each rank group without
+ * relying on Array.prototype.sort being stable, so the ordering is deterministic on every engine.
  */
 export function selectBadges(state: AppState, today: DateKey): BadgeStatus[] {
-  return earnedBadges(state, today).sort((a, b) => badgeRank(a) - badgeRank(b));
+  return earnedBadges(state, today)
+    .map((badge, index) => ({ badge, index }))
+    .sort((a, b) => badgeRank(a.badge) - badgeRank(b.badge) || a.index - b.index)
+    .map((entry) => entry.badge);
 }

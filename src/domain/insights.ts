@@ -11,9 +11,7 @@ import { categoryDone, dayComplete, hasAnySlot, isRestDay } from '@/domain/compl
 import { addDays, compareDateKey, weekDays, weekStartOf, weekdayOf } from '@/domain/date';
 import { weekProgress, type WeekProgress } from '@/domain/progress';
 import { plan } from '@/domain/timeline';
-import type { AppState, Category, DateKey, Weekday } from '@/types/schema';
-
-const CATEGORIES: readonly Category[] = ['aerobic', 'anaerobic'];
+import { CATEGORIES, type AppState, type DateKey, type Weekday } from '@/types/schema';
 
 /** Calendar/heatmap cell classification for one day (spec a1 §4). */
 export type DayStatus =
@@ -184,8 +182,9 @@ export function weeklyTrend(state: AppState, anchorWeekStart: DateKey, weeks: nu
  * topWeekday/missedWeekday reuse weekdayRate (canonical mon..sun, zero-denominator weekdays
  * omitted); iterating in order and updating only on a strict >/< gives the Monday-first tiebreak
  * for free. An empty week (no active, non-rest, slotted day) yields both null and activeDays 0.
- * deltaPct compares this week's pct to the prior week's; when the prior week has no denominator
- * (no active routine, or all rest/empty), it is null rather than a misleading delta-from-zero.
+ * deltaPct compares this week's pct to the prior week's; when either this week or the prior week
+ * has no denominator (no active routine, or all rest/empty), it is null rather than a misleading
+ * delta against a non-real 0% (e.g. an empty current week would otherwise read as a drop to 0).
  */
 export interface WeekReview {
   weekStart: DateKey;
@@ -225,7 +224,8 @@ export function weekReview(state: AppState, weekStartMonday: DateKey, today: Dat
   }
 
   const priorProgress = weekProgress(state, addDays(weekStart, -7));
-  const deltaPct = priorProgress.total === 0 ? null : progress.pct - priorProgress.pct;
+  const deltaPct =
+    progress.total === 0 || priorProgress.total === 0 ? null : progress.pct - priorProgress.pct;
 
   return { weekStart, progress, completedDays, activeDays, topWeekday, missedWeekday, deltaPct };
 }
