@@ -7,7 +7,10 @@
  */
 import { WEEKDAY_LABELS } from '@/constants/labels';
 import { addDays, compareDateKey, weekDays, weekStartOf, weekdayOf } from '@/domain/date';
+import { earnedBadges, type BadgeStatus } from '@/domain/badges';
 import { categoryDone, isRestDay } from '@/domain/completion';
+import { weekReview, type WeekReview } from '@/domain/insights';
+import { subjectParticle } from '@/domain/korean';
 import { weekProgress, type WeekProgress } from '@/domain/progress';
 import { streak } from '@/domain/streak';
 import { plan } from '@/domain/timeline';
@@ -117,6 +120,64 @@ export function selectPendingActivation(state: AppState, today: DateKey): Pendin
   return { routineName: routine.name, effectiveFrom: last.effectiveFrom };
 }
 
+// --- Insights selectors (Stage 3 B3) ---
+
+export interface WeekReviewViewModel {
+  review: WeekReview;
+  /** One-line natural-language summary with Korean particles already applied (display-only). */
+  summary: string;
+}
+
+/** "5일" style day-count phrase (no zero-padding, tabular-friendly digits live in the card). */
+function dayCountLabel(days: number): string {
+  return `${days}일`;
+}
+
+/** "12%p 높습니다 / 낮습니다 / 같습니다" — the prior-week comparison clause for a non-null delta. */
+function deltaClause(deltaPct: number): string {
+  if (deltaPct > 0) return `지난주보다 ${deltaPct}%p 높습니다`;
+  if (deltaPct < 0) return `지난주보다 ${Math.abs(deltaPct)}%p 낮습니다`;
+  return '지난주와 같습니다';
+}
+
+/**
+ * Build the one-line summary from a WeekReview. The screen stays display-only by receiving this
+ * finished string. Branches cover the three boundaries the domain exposes: an empty week (no
+ * active day), a missing prior week (deltaPct === null, drop the 지난주 clause), and a flat delta
+ * (deltaPct === 0). The weekday clause attaches 이/가 via subjectParticle on the real label noun
+ * (never a hardcoded particle), so "월요일" → "월요일이" and a vowel-final label would take "가".
+ * Exported so the copy branches (empty / negative / flat delta) can be unit-tested directly
+ * without fixture gymnastics (spec b3 §5 names these as test directions).
+ */
+export function buildWeekReviewSummary(review: WeekReview): string {
+  if (review.activeDays === 0) {
+    return '이번 주 기록이 아직 없습니다. 운동을 체크하면 요약이 쌓입니다.';
+  }
+  const clauses = [`이번 주 ${dayCountLabel(review.completedDays)} 완료했습니다`];
+  if (review.topWeekday !== null) {
+    const dayNoun = `${WEEKDAY_LABELS[review.topWeekday]}요일`;
+    clauses.push(`${dayNoun}${subjectParticle(dayNoun)} 가장 잘 지킨 요일입니다`);
+  }
+  if (review.deltaPct !== null) {
+    clauses.push(deltaClause(review.deltaPct));
+  }
+  return `${clauses.join(', ')}.`;
+}
+
+/**
+ * Thin B3 selector: runs weekReview (00-overview §2) and assembles the natural-language summary
+ * in one place so WeekReviewCard only displays. weekStartMonday selects the reviewed week; today
+ * is passed through to honor the domain signature.
+ */
+export function selectWeekReview(
+  state: AppState,
+  weekStartMonday: DateKey,
+  today: DateKey,
+): WeekReviewViewModel {
+  const review = weekReview(state, weekStartMonday, today);
+  return { review, summary: buildWeekReviewSummary(review) };
+}
+
 /** Per-day view models for the 7 days of the viewed week (Mon..Sun). */
 export function selectDayViewModels(
   state: AppState,
@@ -139,6 +200,27 @@ export function selectDayViewModels(
       checks: log ? log.checks : { aerobic: {}, anaerobic: {} },
     };
   });
+}
+
+// --- Badge selector (Stage 4 A3) ---
+
+/** Display order rank: earned first, then in-progress (current > 0), then untouched (current 0). */
+function badgeRank(badge: BadgeStatus): number {
+  if (badge.earned) return 0;
+  return badge.progress.current > 0 ? 1 : 2;
+}
+
+/**
+ * Thin A3 selector (spec a3 §2): derives the badge statuses via earnedBadges and sorts them for
+ * display — earned → in-progress → unearned (dev doc §Day2). BadgeGrid only displays the result.
+ * An explicit original-index tie-breaker preserves catalog order within each rank group without
+ * relying on Array.prototype.sort being stable, so the ordering is deterministic on every engine.
+ */
+export function selectBadges(state: AppState, today: DateKey): BadgeStatus[] {
+  return earnedBadges(state, today)
+    .map((badge, index) => ({ badge, index }))
+    .sort((a, b) => badgeRank(a.badge) - badgeRank(b.badge) || a.index - b.index)
+    .map((entry) => entry.badge);
 }
 
 // --- Settings selectors (B1) ---
