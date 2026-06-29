@@ -29,13 +29,13 @@
 
 **산출물**
 - `src/types/schema.ts` — `ReminderSchema`, `SettingsSchema.reminder`
-- `src/domain/migration.ts` — `CURRENT_SCHEMA_VERSION = 2`, `migrations[2]`
+- `src/domain/migration.ts` — `CURRENT_SCHEMA_VERSION = 2`, `migrations[1]`(v1→v2 단계)
 - `src/store/appStore.ts` — `emptyAppState()`에 `reminder` 기본값 시드
 - `src/domain/reminder.ts` (신규) — `needsReminderToday(state, today): boolean`
 
 **작업**
 1. `ReminderSchema = { enabled: boolean, time: 'HH:MM' 정규식 }`. `SettingsSchema`에 `reminder` 추가.
-2. `migrations[2]`: 기존 `settings`에 `reminder` 기본값 `{ enabled:false, time:'20:00' }` 주입, 기존 값 보존.
+2. `migrations[1]`(migrate 루프가 `migrations[version]`로 FROM 버전을 키로 조회 → v1→v2 단계의 키는 `1`): 기존 `settings`에 `reminder` 기본값 `{ enabled:false, time:'20:00' }` 주입, 기존 값 보존.
 3. **신규 설치 경로 시드(중요)**: `emptyAppState()`도 동일 기본값으로 시드한다. 신규 설치는 `schemaVersion`이 이미 2라 마이그레이션을 거치지 않으므로, 누락 시 `state.settings.reminder`가 `undefined`가 되어 셀렉터/UI가 깨진다(spec §1). 두 진입점을 모두 시드한다.
 4. `needsReminderToday`: 오늘이 활동일(`versionOf != null` + 비휴식 + 슬롯 있음)이고 `dayComplete == false`이면 `true`.
 5. **기존 v1 가정 테스트 갱신**: `CURRENT_SCHEMA_VERSION` 상승으로, `schemaVersion: 1` 원본을 `load`·`migrate`하는 기존 `AsyncStorageRepository`/`migration` 테스트가 v2 마이그레이션을 거치게 된다. 해당 기대값을 v2로 갱신한다(도메인 함수 테스트는 `schemaVersion`을 무시하므로 영향 없음).

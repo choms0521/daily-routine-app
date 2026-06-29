@@ -106,7 +106,7 @@ export function weekReview(state: AppState, weekStartMonday: DateKey, today: Dat
 |------|------------|
 | A1 / C2 / B3 | `completionLogs` read-only. **변경 없음** |
 | A3 | 기본은 순수 파생(저장 없음). 최초 획득 축하를 위해 acknowledged 배지 id 보존이 필요할 때만 **선택적 확장**(별도 플래그). 기본 설계는 무저장 |
-| B1 | **유일하게 변경 필요.** `SettingsSchema`에 `reminder` 추가 → `CURRENT_SCHEMA_VERSION` 1→2 + `migrations[2]` 추가 + 마이그레이션 전 자동 백업 경유(PRD 8.4, 기존 `AsyncStorageRepository.load()` 경로 재사용) |
+| B1 | **유일하게 변경 필요.** `SettingsSchema`에 `reminder` 추가 → `CURRENT_SCHEMA_VERSION` 1→2 + `migrations[1]`(v1→v2 단계) 추가 + 마이그레이션 전 자동 백업 경유(PRD 8.4, 기존 `AsyncStorageRepository.load()` 경로 재사용) |
 
 "큰 모델 변화 없는 Top 5"라는 선정 전제에 비추어, B1만 추가 스키마(마이그레이션)를 동반한다. 이는 기존 마이그레이션 골격(`domain/migration.ts`)에 단계 1개를 더하는 가법적(additive) 변경이며, 스트릭·진행률 같은 계산 의미는 건드리지 않는다. 자세한 절차는 `b1-local-reminder.md` §1.
 

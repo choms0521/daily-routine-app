@@ -44,7 +44,7 @@ export const SettingsSchema = z.object({
 });
 ```
 
-- **마이그레이션**: `CURRENT_SCHEMA_VERSION` 1 → 2. `domain/migration.ts`의 `migrations[2]`를 추가해 기존 `settings`에 `reminder` 기본값(`{ enabled: false, time: '20:00' }`)을 주입한다. 기존 값은 보존한다.
+- **마이그레이션**: `CURRENT_SCHEMA_VERSION` 1 → 2. `domain/migration.ts`의 `migrations[1]`을 추가해 기존 `settings`에 `reminder` 기본값(`{ enabled: false, time: '20:00' }`)을 주입한다. 기존 값은 보존한다. (migrate 루프는 `migrations[version]`로 FROM 버전을 키로 조회하므로, v1 → v2 단계의 키는 `migrations[1]`이다.)
 - **신규 설치 경로 시드(중요)**: `reminder`를 필수 필드로 둘 경우, 마이그레이션뿐 아니라 `store/appStore.ts`의 `emptyAppState()`도 동일 기본값으로 시드해야 한다. 신규 설치는 `schemaVersion`이 이미 2라 마이그레이션을 거치지 않으므로, `emptyAppState()`에 `reminder`를 넣지 않으면 `state.settings.reminder`가 `undefined`가 되어 `selectReminder`/`ReminderCard`가 깨진다. 두 진입점(마이그레이션 + `emptyAppState()`)을 모두 시드한다. 대안: `reminder`를 `.optional()`로 두고 읽기 시점에 기본값을 적용하면 두 경로 시드를 모두 우회할 수 있다(둘 중 하나만 채택).
 - **안전망**: 마이그레이션 전 자동 백업은 기존 `AsyncStorageRepository.load()` 경로(PRD 8.4)를 그대로 거치므로 새 코드가 필요 없다. v1→v2 변환 후 모든 기존 참조(`versionId` 등)는 불변이다(가법적 변경).
 - **순수 도메인 함수 1개**: `needsReminderToday(state, today): boolean` — 오늘이 활동일이고 아직 미완료인지(표시·테스트용). 단 알림 발화 시점에 이 함수를 평가하려면 백그라운드 실행이 필요하므로, v1.x는 단순 매일 반복 알림으로 고정한다(§6).
